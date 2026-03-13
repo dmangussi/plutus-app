@@ -1,55 +1,30 @@
-import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabase'
-import type { Category } from './types/database'
+import { useAuth } from './hooks/useAuth'
+import Auth from './pages/Auth'
 
 export default function App() {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading')
+  const { user, loading, signOut } = useAuth()
 
-  useEffect(() => {
-    supabase
-      .from('categories')
-      .select('*')
-      .eq('is_default', true)
-      .then(({ data, error }) => {
-        if (error) { setStatus('error'); return }
-        setCategories(data ?? [])
-        setStatus('ok')
-      })
-  }, [])
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0d0d0d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#555', fontFamily: 'sans-serif' }}>Loading...</p>
+      </div>
+    )
+  }
 
+  if (!user) return <Auth />
+
+  // Authenticated — app goes here
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 40, background: '#0d0d0d', minHeight: '100vh', color: '#f0ece0' }}>
-      <h1 style={{ color: '#c8a86b', marginBottom: 8 }}>⚡ Plutus</h1>
-
-      {status === 'loading' && <p style={{ color: '#888' }}>Connecting to Supabase...</p>}
-
-      {status === 'error' && (
-        <p style={{ color: '#f87171' }}>
-          ✗ Could not connect to Supabase. Check your .env file.
-        </p>
-      )}
-
-      {status === 'ok' && (
-        <>
-          <p style={{ color: '#4ade80', marginBottom: 24 }}>
-            ✓ Connected to Supabase — {categories.length} default categories loaded
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {categories.map(cat => (
-              <span key={cat.id} style={{
-                background: cat.color + '22',
-                border: `1px solid ${cat.color}44`,
-                borderRadius: 6,
-                padding: '4px 12px',
-                fontSize: 14,
-              }}>
-                {cat.emoji} {cat.name}
-              </span>
-            ))}
-          </div>
-        </>
-      )}
+    <div style={{ minHeight: '100vh', background: '#0d0d0d', padding: 40, fontFamily: 'sans-serif' }}>
+      <h1 style={{ color: '#c8a86b' }}>⚡ Plutus</h1>
+      <p style={{ color: '#4ade80' }}>✓ Signed in as {user.email}</p>
+      <button
+        onClick={signOut}
+        style={{ marginTop: 16, padding: '8px 16px', background: '#1e1e1e', color: '#888', border: '1px solid #2a2a2a', borderRadius: 8, cursor: 'pointer', fontFamily: 'sans-serif' }}
+      >
+        Sign out
+      </button>
     </div>
   )
 }
