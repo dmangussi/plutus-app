@@ -1,5 +1,6 @@
 import { useAuth } from './hooks/useAuth'
 import Auth from './pages/Auth'
+import Dashboard from './pages/Dashboard'
 
 export default function App() {
   const { user, loading, signOut } = useAuth()
@@ -14,17 +15,22 @@ export default function App() {
 
   if (!user) return <Auth />
 
-  // Authenticated — app goes here
   return (
-    <div style={{ minHeight: '100vh', background: '#0d0d0d', padding: 40, fontFamily: 'sans-serif' }}>
-      <h1 style={{ color: '#c8a86b' }}>⚡ Plutus</h1>
-      <p style={{ color: '#4ade80' }}>✓ Signed in as {user.email}</p>
-      <button
-        onClick={signOut}
-        style={{ marginTop: 16, padding: '8px 16px', background: '#1e1e1e', color: '#888', border: '1px solid #2a2a2a', borderRadius: 8, cursor: 'pointer', fontFamily: 'sans-serif' }}
-      >
-        Sign out
-      </button>
+    <div style={{ minHeight: '100vh', background: '#0d0d0d', color: '#f0ece0' }}>
+
+      {/* Header */}
+      <header style={{ borderBottom: '1px solid #1e1e1e', padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#0d0d0d', zIndex: 100 }}>
+        <div style={{ fontSize: 18, color: '#c8a86b', fontFamily: 'sans-serif', fontWeight: 700 }}>⚡ Plutus</div>
+        <button
+          onClick={signOut}
+          style={{ padding: '6px 14px', background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 6, cursor: 'pointer', fontFamily: 'sans-serif', fontSize: 12 }}
+        >
+          Sign out
+        </button>
+      </header>
+
+      <Dashboard />
+
     </div>
   )
 }
