@@ -3,8 +3,9 @@ import { useAuth } from './hooks/useAuth'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
+import Import from './pages/Import'
 
-type View = 'dashboard' | 'transactions'
+type View = 'dashboard' | 'transactions' | 'import'
 
 export default function App() {
   const { user, loading, signOut } = useAuth()
@@ -31,13 +32,14 @@ export default function App() {
           {([
             ['dashboard',    'Dashboard'],
             ['transactions', 'Transactions'],
+            ['import',       '⬆ Import CSV'],
           ] as [View, string][]).map(([v, label]) => (
             <button key={v} onClick={() => setView(v)} style={{
               padding: '7px 14px', fontSize: 12, cursor: 'pointer', borderRadius: 4,
               fontFamily: 'sans-serif', transition: 'all .2s',
-              border:      v === view ? '1px solid #c8a86b' : '1px solid #2a2a2a',
-              background:  v === view ? '#c8a86b'           : 'transparent',
-              color:       v === view ? '#0d0d0d'           : '#888',
+              border:     v === view ? '1px solid #c8a86b' : '1px solid #2a2a2a',
+              background: v === view ? '#c8a86b'           : 'transparent',
+              color:      v === view ? '#0d0d0d'           : '#888',
             }}>
               {label}
             </button>
@@ -51,6 +53,7 @@ export default function App() {
 
       {view === 'dashboard'    && <Dashboard />}
       {view === 'transactions' && <Transactions />}
+      {view === 'import'       && <Import onDone={() => setView('dashboard')} />}
 
     </div>
   )
