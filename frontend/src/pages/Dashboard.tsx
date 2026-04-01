@@ -16,7 +16,7 @@ const C = {
   text3:    '#5a5a5a',
 } as const
 
-export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
+export default function Dashboard({ onSignOut, onCategoryClick }: { onSignOut: () => void; onCategoryClick: (categoryId: string, period: string | null) => void }) {
   const { user }                  = useAuth()
   const { transactions, loading } = useTransactions()
   const { getCategory }           = useCategories()
@@ -228,7 +228,7 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             </div>
             <div style={{ padding: '10px 18px 16px', display: 'grid', gap: 16 }}>
               {byCategory.map(({ category, amount }) => (
-                <div key={category?.id ?? 'other'}>
+                <div key={category?.id ?? 'other'} onClick={() => category?.id && onCategoryClick(category.id, activePeriod === 'all' ? null : activePeriod)} style={{ cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{

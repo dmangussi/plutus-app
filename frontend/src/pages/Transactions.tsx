@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTransactions } from '../hooks/useTransactions'
 import { useCategories } from '../hooks/useCategories'
@@ -30,12 +30,17 @@ const sel: React.CSSProperties = {
   minWidth: 0,
 }
 
-export default function Transactions() {
+export default function Transactions({ initialCategoryFilter, initialPeriodFilter }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null }) {
   const { transactions, loading } = useTransactions()
   const { categories, getCategory } = useCategories()
 
-  const [periodFilter,   setPeriodFilter]   = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [periodFilter,   setPeriodFilter]   = useState(initialPeriodFilter ?? 'all')
+  const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter ?? 'all')
+
+  useEffect(() => {
+    setCategoryFilter(initialCategoryFilter ?? 'all')
+    setPeriodFilter(initialPeriodFilter ?? 'all')
+  }, [initialCategoryFilter, initialPeriodFilter])
   const [deleteId,       setDeleteId]       = useState<string | null>(null)
   const [deleting,       setDeleting]       = useState(false)
 

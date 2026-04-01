@@ -16,6 +16,8 @@ const NAV: { view: View; icon: string; label: string }[] = [
 export default function App() {
   const { user, loading, signOut } = useAuth()
   const [view, setView] = useState<View>('dashboard')
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [periodFilter, setPeriodFilter] = useState<string | null>(null)
 
   if (loading) {
     return (
@@ -34,8 +36,8 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: '#0c0c0c', color: '#e3e2df' }}>
 
       <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
-        {view === 'dashboard'    && <Dashboard onSignOut={signOut} />}
-        {view === 'transactions' && <Transactions />}
+        {view === 'dashboard'    && <Dashboard onSignOut={signOut} onCategoryClick={(categoryId, period) => { setCategoryFilter(categoryId); setPeriodFilter(period); setView('transactions') }} />}
+        {view === 'transactions' && <Transactions initialCategoryFilter={categoryFilter} initialPeriodFilter={periodFilter} />}
         {view === 'import'       && <Import onDone={() => setView('dashboard')} />}
       </div>
 
@@ -53,7 +55,7 @@ export default function App() {
           return (
             <button
               key={v}
-              onClick={() => setView(v)}
+              onClick={() => { setCategoryFilter(null); setPeriodFilter(null); setView(v) }}
               style={{
                 flex: 1,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
