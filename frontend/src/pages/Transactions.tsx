@@ -45,6 +45,11 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   }, [initialCategoryFilter, initialPeriodFilter])
   const [deleteId,       setDeleteId]       = useState<string | null>(null)
   const [deleting,       setDeleting]       = useState(false)
+  const [editTx,         setEditTx]         = useState<Transaction | null>(null)
+  const [editDesc,       setEditDesc]       = useState('')
+  const [editAmount,     setEditAmount]     = useState('')
+  const [editCategory,   setEditCategory]   = useState('')
+  const [saving,         setSaving]         = useState(false)
 
   const periods = useMemo(() => {
     const set = new Set(transactions.map(t => t.billing_period).filter(Boolean))
@@ -60,6 +65,29 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   }, [transactions, periodFilter, categoryFilter])
 
   const total = useMemo(() => filtered.reduce((sum, t) => sum + t.amount, 0), [filtered])
+
+  function openEdit(t: Transaction) {
+    setEditTx(t)
+    setEditDesc(t.description)
+    setEditAmount(String(t.amount))
+    setEditCategory(t.category_id ?? '')
+  }
+
+  async function handleSave() {
+    if (!editTx) return
+    setSaving(true)
+    show('Salvando alterações...')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from('transactions') as any).update({
+      description: editDesc,
+      amount: parseFloat(editAmount),
+      category_id: editCategory || null,
+    }).eq('id', editTx.id)
+    hide()
+    setSaving(false)
+    setEditTx(null)
+    refetch()
+  }
 
   async function handleDelete(id: string) {
     setDeleting(true)
@@ -127,6 +155,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
                 key={t.id}
                 transaction={t}
                 getCategory={getCategory}
+                onEdit={openEdit}
                 onDelete={setDeleteId}
               />
             ))}
@@ -135,6 +164,90 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
       </div>
 
       {/* ── Delete modal ────────────────────────────────────────── */}
+      {/* ── Edit modal ─────────────────────────────────────────── */}
+      {editTx && (
+        <div style={{
+          position: 'fixed', inset: 0, background: '#000000cc',
+          zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 20px',
+        }}>
+          <div style={{
+            background: '#141414', border: '1px solid #1e1e1e',
+            borderRadius: 16, padding: '24px 20px',
+            width: '100%', maxWidth: 360, fontFamily: 'Inter, sans-serif',
+          }}>
+            <div style={{ color: C.text, fontSize: 16, fontWeight: 600, fontFamily: 'Lora, Georgia, serif', marginBottom: 20 }}>
+              Editar transação
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, color: C.text3, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6, fontWeight: 500 }}>
+                  Descrição
+                </label>
+                <input
+                  value={editDesc}
+                  onChange={e => setEditDesc(e.target.value)}
+                  style={{ ...sel, padding: '11px 12px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 10, color: C.text3, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6, fontWeight: 500 }}>
+                  Valor
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editAmount}
+                  onChange={e => setEditAmount(e.target.value)}
+                  style={{ ...sel, padding: '11px 12px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 10, color: C.text3, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6, fontWeight: 500 }}>
+                  Categoria
+                </label>
+                <select
+                  value={editCategory}
+                  onChange={e => setEditCategory(e.target.value)}
+                  style={sel}
+                >
+                  <option value="">Sem categoria</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <button
+                onClick={() => setEditTx(null)}
+                style={{
+                  flex: 1, padding: 13, background: 'transparent',
+                  border: '1px solid #1e1e1e', color: C.text2,
+                  cursor: 'pointer', borderRadius: 10, fontSize: 13,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !editDesc.trim() || !editAmount}
+                style={{
+                  flex: 1, padding: 13, background: C.primary,
+                  border: 'none', color: '#fff',
+                  cursor: 'pointer', borderRadius: 10, fontWeight: 600, fontSize: 13,
+                  opacity: (!editDesc.trim() || !editAmount) ? 0.4 : 1,
+                }}
+              >
+                {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteId && (
         <div style={{
           position: 'fixed', inset: 0, background: '#000000cc',
@@ -188,22 +301,27 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 }
 
 // ── Single transaction row ────────────────────────────────────
-function TransactionRow({ transaction: t, getCategory, onDelete }: {
+function TransactionRow({ transaction: t, getCategory, onEdit, onDelete }: {
   transaction: Transaction
   getCategory: (id: string | null) => ReturnType<ReturnType<typeof useCategories>['getCategory']>
+  onEdit: (t: Transaction) => void
   onDelete: (id: string) => void
 }) {
   const category = getCategory(t.category_id)
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '12px 12px',
-      background: '#141414',
-      border: '1px solid #1e1e1e',
-      borderRadius: 12,
-      width: '100%', minWidth: 0,
-    }}>
+    <div
+      onClick={() => onEdit(t)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '12px 12px',
+        background: '#141414',
+        border: '1px solid #1e1e1e',
+        borderRadius: 12,
+        width: '100%', minWidth: 0,
+        cursor: 'pointer',
+      }}
+    >
       {/* Category icon */}
       <div style={{
         width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
@@ -232,7 +350,7 @@ function TransactionRow({ transaction: t, getCategory, onDelete }: {
           {formatCurrency(t.amount)}
         </div>
         <button
-          onClick={() => onDelete(t.id)}
+          onClick={(e) => { e.stopPropagation(); onDelete(t.id) }}
           style={{
             background: 'transparent', border: '1px solid #1e1e1e',
             color: '#3a3a3a', cursor: 'pointer', fontSize: 10,
