@@ -1,3 +1,4 @@
+import { USE_MOCK_AI, mockClassify } from "./mockClassification"
 // ── Transactions to ignore from CSV ──────────────────────────
 const IGNORE_PATTERNS = [
   'payment with balance',
@@ -97,4 +98,15 @@ ${list}`
 
   const text = data.content.map((b: { text?: string }) => b.text ?? '').join('').trim()
   return JSON.parse(text.replace(/```json|```/g, '').trim())
+}
+
+// ── Switch: mock vs real API ──────────────────────────────────
+export async function classify(
+  items: RawTransaction[],
+  categoryNames: string[],
+): Promise<AIResult[]> {
+  const indexed = items.map((r, i) => ({ idx: i, description: r.description }))
+
+  if (USE_MOCK_AI) return mockClassify(indexed)
+  return classifyWithAI(items, categoryNames)
 }

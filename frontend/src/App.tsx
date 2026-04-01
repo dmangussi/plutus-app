@@ -7,14 +7,23 @@ import Import from './pages/Import'
 
 type View = 'dashboard' | 'transactions' | 'import'
 
+const NAV: { view: View; icon: string; label: string }[] = [
+  { view: 'dashboard',    icon: '⊞',  label: 'Início' },
+  { view: 'transactions', icon: '☰',  label: 'Gastos' },
+  { view: 'import',       icon: '↑',  label: 'Importar' },
+]
+
 export default function App() {
   const { user, loading, signOut } = useAuth()
   const [view, setView] = useState<View>('dashboard')
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0d0d0d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#555', fontFamily: 'sans-serif' }}>Loading...</p>
+      <div style={{ minHeight: '100vh', background: '#0c0c0c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 28, marginBottom: 12, color: '#c96a3a' }}>✳</div>
+          <p style={{ color: '#5a5a5a', fontFamily: 'Inter, sans-serif', fontSize: 14 }}>Carregando...</p>
+        </div>
       </div>
     )
   }
@@ -22,39 +31,49 @@ export default function App() {
   if (!user) return <Auth />
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0d0d0d', color: '#f0ece0' }}>
+    <div style={{ minHeight: '100vh', background: '#0c0c0c', color: '#e3e2df' }}>
 
-      {/* Header */}
-      <header style={{ borderBottom: '1px solid #1e1e1e', padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#0d0d0d', zIndex: 100 }}>
-        <div style={{ fontSize: 18, color: '#c8a86b', fontFamily: 'sans-serif', fontWeight: 700 }}>⚡ Plutus</div>
+      <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
+        {view === 'dashboard'    && <Dashboard onSignOut={signOut} />}
+        {view === 'transactions' && <Transactions />}
+        {view === 'import'       && <Import onDone={() => setView('dashboard')} />}
+      </div>
 
-        <nav style={{ display: 'flex', gap: 4 }}>
-          {([
-            ['dashboard',    'Dashboard'],
-            ['transactions', 'Transactions'],
-            ['import',       '⬆ Import CSV'],
-          ] as [View, string][]).map(([v, label]) => (
-            <button key={v} onClick={() => setView(v)} style={{
-              padding: '7px 14px', fontSize: 12, cursor: 'pointer', borderRadius: 4,
-              fontFamily: 'sans-serif', transition: 'all .2s',
-              border:     v === view ? '1px solid #c8a86b' : '1px solid #2a2a2a',
-              background: v === view ? '#c8a86b'           : 'transparent',
-              color:      v === view ? '#0d0d0d'           : '#888',
-            }}>
-              {label}
+      {/* ── Bottom navigation ──────────────────────────────────── */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: '#0c0c0c',
+        borderTop: '1px solid #1e1e1e',
+        display: 'flex',
+        zIndex: 100,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}>
+        {NAV.map(({ view: v, icon, label }) => {
+          const active = v === view
+          return (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              style={{
+                flex: 1,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: 3,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                padding: '10px 0 8px',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              <span style={{ fontSize: 18, lineHeight: 1, color: active ? '#c96a3a' : '#3a3a3a' }}>
+                {icon}
+              </span>
+              <span style={{ fontSize: 10, fontWeight: active ? 600 : 400, color: active ? '#c96a3a' : '#3a3a3a', letterSpacing: 0.3 }}>
+                {label}
+              </span>
+              <div style={{ width: 16, height: 1.5, borderRadius: 1, background: active ? '#c96a3a' : 'transparent', marginTop: 1 }} />
             </button>
-          ))}
-        </nav>
-
-        <button onClick={signOut} style={{ padding: '6px 14px', background: 'transparent', border: '1px solid #2a2a2a', color: '#555', borderRadius: 6, cursor: 'pointer', fontFamily: 'sans-serif', fontSize: 12 }}>
-          Sign out
-        </button>
-      </header>
-
-      {view === 'dashboard'    && <Dashboard />}
-      {view === 'transactions' && <Transactions />}
-      {view === 'import'       && <Import onDone={() => setView('dashboard')} />}
-
+          )
+        })}
+      </nav>
     </div>
   )
 }
