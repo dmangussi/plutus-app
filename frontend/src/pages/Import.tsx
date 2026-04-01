@@ -105,7 +105,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
       const items: Candidate[] = raw.map((r, i) => {
         const ai       = aiResults.find(a => a.idx === i)
         const category = categories.find(c => c.name === ai?.categoryName)
-          ?? categories.find(c => c.name === 'Other')
+          ?? categories.find(c => c.name === 'Outros')
           ?? null
         return {
           tempId:         `${Date.now()}-${i}`,

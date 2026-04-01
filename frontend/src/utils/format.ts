@@ -1,9 +1,9 @@
 export const formatCurrency = (value: number) =>
-  value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export const PERIOD_MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
+  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
 ]
 
 export const periodLabel = (key: string) => {

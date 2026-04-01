@@ -6,21 +6,21 @@ export const USE_MOCK_AI = true
 
 // Sample mock results — maps raw description keywords to clean name + category
 const MOCK_RULES: { keywords: string[]; description: string; categoryName: string }[] = [
-  { keywords: ['drogasil', 'farmacia', 'droga', 'pacheco'],         description: 'Pharmacy',         categoryName: 'Health' },
-  { keywords: ['uber', '99pop', '99 pop'],                           description: 'Uber',              categoryName: 'Transport' },
-  { keywords: ['posto', 'ipiranga', 'shell', 'petrobras'],           description: 'Gas Station',       categoryName: 'Transport' },
-  { keywords: ['spotify'],                                            description: 'Spotify',           categoryName: 'Subscriptions' },
-  { keywords: ['netflix'],                                            description: 'Netflix',           categoryName: 'Subscriptions' },
-  { keywords: ['amazon prime', 'prime video'],                       description: 'Amazon Prime',      categoryName: 'Subscriptions' },
-  { keywords: ['youtube'],                                            description: 'YouTube Premium',   categoryName: 'Subscriptions' },
-  { keywords: ['disney'],                                             description: 'Disney+',           categoryName: 'Subscriptions' },
-  { keywords: ['supermercado', 'mercado', 'extra', 'carrefour', 'atacadao', 'guaratu'], description: 'Supermarket', categoryName: 'Groceries' },
-  { keywords: ['padaria', 'panificadora', 'bakery'],                 description: 'Bakery',            categoryName: 'Food' },
-  { keywords: ['restaurante', 'burger', 'pizza', 'lanchonete', 'mcdonalds', 'subway'], description: 'Restaurant', categoryName: 'Restaurants' },
-  { keywords: ['salao', 'barbearia', 'cabelo', 'beauty'],            description: 'Beauty Salon',      categoryName: 'Beauty' },
-  { keywords: ['cinema', 'ingresso', 'show', 'teatro'],              description: 'Entertainment',     categoryName: 'Entertainment' },
-  { keywords: ['escola', 'faculdade', 'curso', 'cambly'],            description: 'Education',         categoryName: 'Education' },
-  { keywords: ['aluguel', 'condominio', 'luz', 'energia', 'agua'],   description: 'Housing',           categoryName: 'Housing' },
+  { keywords: ['drogasil', 'farmacia', 'droga', 'pacheco'],         description: 'Farmácia',          categoryName: 'Saúde' },
+  { keywords: ['uber', '99pop', '99 pop'],                           description: 'Uber',              categoryName: 'Transporte' },
+  { keywords: ['posto', 'ipiranga', 'shell', 'petrobras'],           description: 'Posto',             categoryName: 'Transporte' },
+  { keywords: ['spotify'],                                            description: 'Spotify',           categoryName: 'Assinaturas' },
+  { keywords: ['netflix'],                                            description: 'Netflix',           categoryName: 'Assinaturas' },
+  { keywords: ['amazon prime', 'prime video'],                       description: 'Amazon Prime',      categoryName: 'Assinaturas' },
+  { keywords: ['youtube'],                                            description: 'YouTube Premium',   categoryName: 'Assinaturas' },
+  { keywords: ['disney'],                                             description: 'Disney+',           categoryName: 'Assinaturas' },
+  { keywords: ['supermercado', 'mercado', 'extra', 'carrefour', 'atacadao', 'guaratu'], description: 'Supermercado', categoryName: 'Mercado' },
+  { keywords: ['padaria', 'panificadora', 'bakery'],                 description: 'Padaria',           categoryName: 'Alimentação' },
+  { keywords: ['restaurante', 'burger', 'pizza', 'lanchonete', 'mcdonalds', 'subway'], description: 'Restaurante', categoryName: 'Restaurantes' },
+  { keywords: ['salao', 'barbearia', 'cabelo', 'beauty'],            description: 'Salão de Beleza',   categoryName: 'Beleza' },
+  { keywords: ['cinema', 'ingresso', 'show', 'teatro'],              description: 'Lazer',             categoryName: 'Lazer' },
+  { keywords: ['escola', 'faculdade', 'curso', 'cambly'],            description: 'Educação',          categoryName: 'Educação' },
+  { keywords: ['aluguel', 'condominio', 'luz', 'energia', 'agua'],   description: 'Moradia',           categoryName: 'Moradia' },
 ]
 
 function cleanDescription(raw: string): string {
@@ -43,7 +43,7 @@ export function mockClassify(items: { idx: number; description: string }[]): AIR
     return {
       idx:          item.idx,
       description:  rule?.description ?? cleanDescription(item.description),
-      categoryName: rule?.categoryName ?? 'Other',
+      categoryName: rule?.categoryName ?? 'Outros',
     }
   })
 }

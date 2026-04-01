@@ -17,7 +17,7 @@ export function useCategories() {
   }, [])
 
   const getCategory = (id: string | null) =>
-    categories.find(c => c.id === id) ?? categories.find(c => c.name === 'Other') ?? null
+    categories.find(c => c.id === id) ?? categories.find(c => c.name === 'Outros') ?? null
 
   return { categories, loading, getCategory }
 }

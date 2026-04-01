@@ -90,15 +90,15 @@ CREATE INDEX idx_memory_raw          ON category_memory (user_id, raw_descriptio
 
 -- Default categories
 INSERT INTO categories (user_id, name, emoji, color, is_default) VALUES
-  (NULL, 'Food',          '🍽️', '#FF6B6B', true),
-  (NULL, 'Transport',     '🚗',  '#4ECDC4', true),
-  (NULL, 'Health',        '💊',  '#45B7D1', true),
-  (NULL, 'Education',     '📚',  '#96CEB4', true),
-  (NULL, 'Entertainment', '🎮',  '#FFEAA7', true),
-  (NULL, 'Clothing',      '👗',  '#DDA0DD', true),
-  (NULL, 'Housing',       '🏠',  '#F0A500', true),
-  (NULL, 'Groceries',     '🛒',  '#98D8C8', true),
-  (NULL, 'Subscriptions', '📱',  '#B8B8FF', true),
-  (NULL, 'Restaurants',   '🍕',  '#FFB347', true),
-  (NULL, 'Beauty',        '💇',  '#F4A0C0', true),
-  (NULL, 'Other',         '📦',  '#C0C0C0', true);
+  (NULL, 'Alimentação',   '🍽️', '#FF6B6B', true),
+  (NULL, 'Transporte',    '🚗',  '#4ECDC4', true),
+  (NULL, 'Saúde',         '💊',  '#45B7D1', true),
+  (NULL, 'Educação',      '📚',  '#96CEB4', true),
+  (NULL, 'Lazer',         '🎮',  '#FFEAA7', true),
+  (NULL, 'Vestuário',     '👗',  '#DDA0DD', true),
+  (NULL, 'Moradia',       '🏠',  '#F0A500', true),
+  (NULL, 'Mercado',       '🛒',  '#98D8C8', true),
+  (NULL, 'Assinaturas',   '📱',  '#B8B8FF', true),
+  (NULL, 'Restaurantes',  '🍕',  '#FFB347', true),
+  (NULL, 'Beleza',        '💇',  '#F4A0C0', true),
+  (NULL, 'Outros',        '📦',  '#C0C0C0', true);
