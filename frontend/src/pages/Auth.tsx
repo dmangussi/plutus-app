@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { useLoading } from '../hooks/useLoading'
 
 type Mode = 'signin' | 'signup'
 
@@ -15,6 +16,7 @@ const C = {
 
 export default function Auth() {
   const { signIn, signUp } = useAuth()
+  const { show, hide } = useLoading()
   const [mode, setMode]         = useState<Mode>('signin')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -25,9 +27,11 @@ export default function Auth() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+    show(mode === 'signin' ? 'Entrando...' : 'Criando conta...')
     const { error } = mode === 'signin'
       ? await signIn(email, password)
       : await signUp(email, password)
+    hide()
     if (error) setError(error.message)
     setLoading(false)
   }

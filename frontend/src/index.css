@@ -39,3 +39,7 @@ select option {
   background: #2a2a2a;
   border-radius: 2px;
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

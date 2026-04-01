@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTransactions } from '../hooks/useTransactions'
 import { useCategories } from '../hooks/useCategories'
+import { useLoading } from '../hooks/useLoading'
 import { formatCurrency, periodLabel } from '../utils/format'
 import type { Transaction } from '../types/database'
 
@@ -33,6 +34,7 @@ const sel: React.CSSProperties = {
 export default function Transactions({ initialCategoryFilter, initialPeriodFilter }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null }) {
   const { transactions, loading } = useTransactions()
   const { categories, getCategory } = useCategories()
+  const { show, hide } = useLoading()
 
   const [periodFilter,   setPeriodFilter]   = useState(initialPeriodFilter ?? 'all')
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter ?? 'all')
@@ -61,7 +63,9 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 
   async function handleDelete(id: string) {
     setDeleting(true)
+    show('Excluindo transação...')
     await supabase.from('transactions').delete().eq('id', id)
+    hide()
     setDeleteId(null)
     setDeleting(false)
     window.location.reload()

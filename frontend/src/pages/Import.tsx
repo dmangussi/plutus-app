@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
 import { useTransactions } from '../hooks/useTransactions'
+import { useLoading } from '../hooks/useLoading'
 import { parseCSV, classify } from '../utils/csv'
 import { formatCurrency, periodKey } from '../utils/format'
 import type { Category } from '../types/database'
@@ -61,6 +62,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
   const { categories } = useCategories()
   const { user }       = useAuth()
   const { transactions } = useTransactions()
+  const { show, hide } = useLoading()
 
   const [step,       setStep]       = useState<Step>('upload')
   const [progress,   setProgress]   = useState('')
@@ -95,11 +97,13 @@ export default function Import({ onDone }: { onDone: () => void }) {
     setError('')
     setStep('processing')
     setProgress('Lendo arquivo CSV...')
+    show('Processando CSV...')
     try {
       const text = await file.text()
       const raw  = parseCSV(text)
       if (!raw.length) throw new Error('Nenhuma transação encontrada no arquivo.')
       setProgress(`${raw.length} transações encontradas. Classificando com IA...`)
+      show('Classificando com IA...')
       const categoryNames = [...new Set(categories.map(c => c.name))]
       const aiResults     = await classify(raw, categoryNames)
       const items: Candidate[] = raw.map((r, i) => {
@@ -118,8 +122,10 @@ export default function Import({ onDone }: { onDone: () => void }) {
       })
       setCandidates(items)
       setSelected(Object.fromEntries(items.map(it => [it.tempId, !isDuplicate(it)])))
+      hide()
       setStep('review')
     } catch (e) {
+      hide()
       setError('Erro: ' + (e as Error).message)
       setStep('upload')
     }
@@ -145,6 +151,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
 
   async function handleConfirm() {
     setSaving(true)
+    show('Salvando transações...')
     const toInsert = candidates
       .filter(c => selected[c.tempId] && !isDuplicate(c))
       .map(c => ({
@@ -160,6 +167,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
       }))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase.from('transactions').insert(toInsert as any)
+    hide()
     if (error) { setError('Erro ao salvar: ' + error.message); setSaving(false); return }
     setSaving(false)
     onDone()
