@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Transaction } from '../types/database'
 
@@ -7,7 +7,7 @@ export function useTransactions() {
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetch = useCallback(() => {
     supabase
       .from('transactions')
       .select('*')
@@ -19,5 +19,7 @@ export function useTransactions() {
       })
   }, [])
 
-  return { transactions, loading, error }
+  useEffect(() => { fetch() }, [fetch])
+
+  return { transactions, loading, error, refetch: fetch }
 }

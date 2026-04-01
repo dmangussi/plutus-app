@@ -32,7 +32,7 @@ const sel: React.CSSProperties = {
 }
 
 export default function Transactions({ initialCategoryFilter, initialPeriodFilter }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null }) {
-  const { transactions, loading } = useTransactions()
+  const { transactions, loading, refetch } = useTransactions()
   const { categories, getCategory } = useCategories()
   const { show, hide } = useLoading()
 
@@ -68,7 +68,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     hide()
     setDeleteId(null)
     setDeleting(false)
-    window.location.reload()
+    refetch()
   }
 
   if (loading) {
@@ -138,19 +138,19 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
       {deleteId && (
         <div style={{
           position: 'fixed', inset: 0, background: '#000000cc',
-          zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-          padding: '0 0 env(safe-area-inset-bottom, 0px)',
+          zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 20px',
         }}>
           <div style={{
             background: '#141414', border: '1px solid #1e1e1e',
-            borderRadius: '20px 20px 0 0', padding: '28px 24px 36px',
-            width: '100%', maxWidth: 480, fontFamily: 'Inter, sans-serif', textAlign: 'center',
+            borderRadius: 16, padding: '28px 24px',
+            width: '100%', maxWidth: 340, fontFamily: 'Inter, sans-serif', textAlign: 'center',
           }}>
             <div style={{
-              width: 48, height: 48, borderRadius: '50%',
+              width: 44, height: 44, borderRadius: '50%',
               background: C.surface2,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 20, margin: '0 auto 14px',
+              fontSize: 18, margin: '0 auto 14px',
             }}>🗑</div>
             <div style={{ color: C.text, fontSize: 16, marginBottom: 6, fontWeight: 600, fontFamily: 'Lora, Georgia, serif' }}>
               Excluir transação?
