@@ -4,8 +4,12 @@ import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
 import { useTransactions } from '../hooks/useTransactions'
 import { useLoading } from '../hooks/useLoading'
+import { PageHeader } from '../components/PageHeader'
+import { ErrorMessage } from '../components/ErrorMessage'
 import { parseCSV, classify } from '../utils/csv'
 import { formatCurrency, periodKey } from '../utils/format'
+import { colors, fonts } from '../styles/theme'
+import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
 import type { Category } from '../types/database'
 
 interface Candidate {
@@ -18,45 +22,6 @@ interface Candidate {
 }
 
 type Step = 'upload' | 'processing' | 'review'
-
-const C = {
-  bg:      '#0c0c0c',
-  surface: '#141414',
-  surface2:'#1e1e1e',
-  border:  '#1e1e1e',
-  primary: '#c96a3a',
-  text:    '#e3e2df',
-  text2:   '#a0a0a0',
-  text3:   '#5a5a5a',
-} as const
-
-const inputStyle: React.CSSProperties = {
-  padding: '11px 12px',
-  background: C.bg,
-  border: '1px solid #1e1e1e',
-  color: '#e3e2df',
-  borderRadius: 10,
-  fontSize: 13,
-  fontFamily: 'Inter, sans-serif',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-}
-
-const btnPrimary: React.CSSProperties = {
-  padding: '13px 0',
-  background: '#c96a3a',
-  border: 'none',
-  color: '#fff', borderRadius: 10, cursor: 'pointer',
-  fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 600,
-}
-
-const btnGhost: React.CSSProperties = {
-  padding: '13px 0', background: 'transparent',
-  border: '1px solid #1e1e1e', color: '#5a5a5a',
-  borderRadius: 10, cursor: 'pointer',
-  fontFamily: 'Inter, sans-serif', fontSize: 13,
-}
 
 export default function Import({ onDone }: { onDone: () => void }) {
   const { categories } = useCategories()
@@ -165,8 +130,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
         installments:       1,
         installment_number: 1,
       }))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await supabase.from('transactions').insert(toInsert as any)
+    const { error } = await supabase.from('transactions').insert(toInsert as never)
     hide()
     if (error) { setError('Erro ao salvar: ' + error.message); setSaving(false); return }
     setSaving(false)
@@ -180,18 +144,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
-      {/* Header */}
-      <div style={{ padding: '52px 20px 20px' }}>
-        <h2 style={{
-          margin: '0 0 4px', fontSize: 26, fontWeight: 600,
-          color: C.text, fontFamily: 'Lora, Georgia, serif', letterSpacing: -0.3,
-        }}>
-          Importar CSV
-        </h2>
-        <p style={{ margin: 0, fontSize: 13, color: C.text3, fontFamily: 'Inter, sans-serif' }}>
-          Extrato do Itaú
-        </p>
-      </div>
+      <PageHeader title="Importar CSV" subtitle="Extrato do Itaú" />
 
       <div style={{ padding: '0 20px' }}>
 
@@ -199,7 +152,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
         {step === 'upload' && (
           <div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 10, color: C.text3, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
+              <label style={{ ...labelStyle, letterSpacing: 1.5, marginBottom: 8 }}>
                 Período de fatura
               </label>
               <select value={billingPeriod} onChange={e => setBillingPeriod(e.target.value)} style={inputStyle}>
@@ -218,20 +171,18 @@ export default function Import({ onDone }: { onDone: () => void }) {
               onDrop={handleDrop}
               onClick={() => fileRef.current?.click()}
               style={{
-                border: `1px dashed ${dragging ? C.primary : '#2a2a2a'}`,
-                borderRadius: 14,
-                padding: '48px 24px',
-                textAlign: 'center',
+                border: `1px dashed ${dragging ? colors.primary : colors.border2}`,
+                borderRadius: 14, padding: '48px 24px', textAlign: 'center',
                 cursor: 'pointer',
-                background: dragging ? '#1a0e08' : C.surface,
+                background: dragging ? '#1a0e08' : colors.surface,
                 transition: 'all .2s',
               }}
             >
               <div style={{ fontSize: 28, marginBottom: 12 }}>📂</div>
-              <div style={{ color: C.text2, fontSize: 13, marginBottom: 6, fontFamily: 'Inter, sans-serif' }}>
+              <div style={{ color: colors.text2, fontSize: 13, marginBottom: 6, fontFamily: fonts.body }}>
                 Solte o arquivo aqui ou toque para selecionar
               </div>
-              <div style={{ color: C.text3, fontSize: 12, fontFamily: 'Inter, sans-serif' }}>
+              <div style={{ color: colors.text3, fontSize: 12, fontFamily: fonts.body }}>
                 Formato Itaú: data, descrição, valor
               </div>
             </div>
@@ -239,9 +190,9 @@ export default function Import({ onDone }: { onDone: () => void }) {
             <input ref={fileRef} type="file" accept=".csv" onChange={handleFileChange} style={{ display: 'none' }} />
 
             {error && (
-              <p style={{ color: '#e07a5f', fontSize: 13, marginTop: 10, padding: '10px 12px', background: '#1a0e08', border: '1px solid #3a2010', borderRadius: 8, fontFamily: 'Inter, sans-serif' }}>
-                {error}
-              </p>
+              <div style={{ marginTop: 10 }}>
+                <ErrorMessage message={error} />
+              </div>
             )}
           </div>
         )}
@@ -249,8 +200,8 @@ export default function Import({ onDone }: { onDone: () => void }) {
         {/* ── PROCESSING ── */}
         {step === 'processing' && (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <div style={{ fontSize: 28, marginBottom: 16, color: C.primary }}>✳</div>
-            <div style={{ color: C.text2, fontSize: 14, fontFamily: 'Inter, sans-serif' }}>{progress}</div>
+            <div style={{ fontSize: 28, marginBottom: 16, color: colors.primary }}>✳</div>
+            <div style={{ color: colors.text2, fontSize: 14, fontFamily: fonts.body }}>{progress}</div>
           </div>
         )}
 
@@ -258,7 +209,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
         {step === 'review' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span style={{ fontSize: 12, color: C.text3, fontFamily: 'Inter, sans-serif' }}>
+              <span style={{ fontSize: 12, color: colors.text3, fontFamily: fonts.body }}>
                 {candidates.length} encontradas · {duplicateCount} já importadas
               </span>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -290,9 +241,9 @@ export default function Import({ onDone }: { onDone: () => void }) {
             </div>
 
             {error && (
-              <p style={{ color: '#e07a5f', fontSize: 13, marginBottom: 10, padding: '10px 12px', background: '#1a0e08', border: '1px solid #3a2010', borderRadius: 8, fontFamily: 'Inter, sans-serif' }}>
-                {error}
-              </p>
+              <div style={{ marginBottom: 10 }}>
+                <ErrorMessage message={error} />
+              </div>
             )}
 
             <div style={{ display: 'flex', gap: 8 }}>
@@ -329,8 +280,8 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '9px 10px',
-        background: duplicate ? '#0e0e0e' : selected ? '#1a1208' : '#141414',
-        border: `1px solid ${duplicate ? '#1e1e1e' : selected ? '#3a2a18' : '#1e1e1e'}`,
+        background: duplicate ? '#0e0e0e' : selected ? '#1a1208' : colors.surface,
+        border: `1px solid ${duplicate ? colors.border : selected ? '#3a2a18' : colors.border}`,
         borderRadius: 10,
         cursor: duplicate ? 'default' : 'pointer',
         opacity: duplicate ? 0.45 : 1,
@@ -340,8 +291,8 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
       {/* Checkbox */}
       <div style={{
         width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-        border: `1.5px solid ${selected ? '#c96a3a' : '#2a2a2a'}`,
-        background: selected ? '#c96a3a' : 'transparent',
+        border: `1.5px solid ${selected ? colors.primary : colors.border2}`,
+        background: selected ? colors.primary : 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 9, color: '#fff', fontWeight: 700,
       }}>
@@ -351,14 +302,14 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
       <span style={{ fontSize: 14, flexShrink: 0 }}>{category?.emoji ?? '📦'}</span>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: selected ? '#e3e2df' : '#5a5a5a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ fontSize: 12, color: selected ? colors.text : colors.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: fonts.body }}>
           {c.description}
         </div>
-        <div style={{ fontSize: 10, color: '#3a3a3a', marginTop: 1, fontFamily: 'Inter, sans-serif' }}>{c.date}</div>
+        <div style={{ fontSize: 10, color: '#3a3a3a', marginTop: 1, fontFamily: fonts.body }}>{c.date}</div>
       </div>
 
       {duplicate && (
-        <span style={{ fontSize: 9, color: '#5a8a5a', background: '#0e1a0e', border: '1px solid #1e3a1e', borderRadius: 4, padding: '2px 6px', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif' }}>
+        <span style={{ fontSize: 9, color: '#5a8a5a', background: '#0e1a0e', border: '1px solid #1e3a1e', borderRadius: 4, padding: '2px 6px', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: fonts.body }}>
           já importada
         </span>
       )}
@@ -368,9 +319,9 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
         onClick={e => e.stopPropagation()}
         onChange={e => onCategoryChange(e.target.value)}
         style={{
-          padding: '3px 5px', background: '#0c0c0c',
-          border: '1px solid #1e1e1e', color: '#a0a0a0',
-          borderRadius: 5, fontSize: 10, fontFamily: 'Inter, sans-serif', maxWidth: 90,
+          padding: '3px 5px', background: colors.bg,
+          border: `1px solid ${colors.border}`, color: colors.text2,
+          borderRadius: 5, fontSize: 10, fontFamily: fonts.body, maxWidth: 90,
         }}
       >
         {categories.map(cat => (
@@ -378,7 +329,7 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
         ))}
       </select>
 
-      <div style={{ fontSize: 12, color: selected ? '#e3e2df' : '#3a3a3a', flexShrink: 0, minWidth: 60, textAlign: 'right', fontWeight: selected ? 600 : 400, fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ fontSize: 12, color: selected ? colors.text : '#3a3a3a', flexShrink: 0, minWidth: 60, textAlign: 'right', fontWeight: selected ? 600 : 400, fontFamily: fonts.body }}>
         {formatCurrency(c.amount)}
       </div>
     </div>

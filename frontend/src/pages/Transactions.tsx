@@ -3,33 +3,14 @@ import { supabase } from '../lib/supabase'
 import { useTransactions } from '../hooks/useTransactions'
 import { useCategories } from '../hooks/useCategories'
 import { useLoading } from '../hooks/useLoading'
+import { PageHeader } from '../components/PageHeader'
+import { LoadingPlaceholder } from '../components/LoadingPlaceholder'
+import { EmptyState } from '../components/EmptyState'
+import { Modal } from '../components/Modal'
 import { formatCurrency, periodLabel } from '../utils/format'
+import { colors, fonts } from '../styles/theme'
+import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
 import type { Transaction } from '../types/database'
-
-const C = {
-  bg:      '#0c0c0c',
-  surface: '#141414',
-  surface2:'#1e1e1e',
-  border:  '#1e1e1e',
-  primary: '#c96a3a',
-  text:    '#e3e2df',
-  text2:   '#a0a0a0',
-  text3:   '#5a5a5a',
-} as const
-
-const sel: React.CSSProperties = {
-  padding: '10px 12px',
-  background: '#141414',
-  border: '1px solid #1e1e1e',
-  color: '#e3e2df',
-  borderRadius: 10,
-  fontSize: 13,
-  fontFamily: 'Inter, sans-serif',
-  outline: 'none',
-  width: '100%',
-  maxWidth: '100%',
-  minWidth: 0,
-}
 
 export default function Transactions({ initialCategoryFilter, initialPeriodFilter }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null }) {
   const { transactions, loading, refetch } = useTransactions()
@@ -43,6 +24,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     setCategoryFilter(initialCategoryFilter ?? 'all')
     setPeriodFilter(initialPeriodFilter ?? 'all')
   }, [initialCategoryFilter, initialPeriodFilter])
+
   const [deleteId,       setDeleteId]       = useState<string | null>(null)
   const [deleting,       setDeleting]       = useState(false)
   const [editTx,         setEditTx]         = useState<Transaction | null>(null)
@@ -77,12 +59,11 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     if (!editTx) return
     setSaving(true)
     show('Salvando alterações...')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('transactions') as any).update({
+    await supabase.from('transactions').update({
       description: editDesc,
       amount: parseFloat(editAmount),
       category_id: editCategory || null,
-    }).eq('id', editTx.id)
+    } as never).eq('id', editTx.id)
     hide()
     setSaving(false)
     setEditTx(null)
@@ -99,39 +80,23 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     refetch()
   }
 
-  if (loading) {
-    return (
-      <div style={{ padding: '80px 24px', textAlign: 'center', color: C.text3, fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ fontSize: 24, marginBottom: 12, color: C.primary }}>✳</div>
-        Carregando...
-      </div>
-    )
-  }
+  if (loading) return <LoadingPlaceholder />
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', overflowX: 'hidden' }}>
 
-      {/* ── Page header ─────────────────────────────────────────── */}
-      <div style={{ padding: '52px 20px 20px' }}>
-        <h2 style={{
-          margin: '0 0 4px', fontSize: 26, fontWeight: 600,
-          color: C.text, fontFamily: 'Lora, Georgia, serif', letterSpacing: -0.3,
-        }}>
-          Gastos
-        </h2>
-        <p style={{ margin: 0, fontSize: 13, color: C.text3, fontFamily: 'Inter, sans-serif' }}>
-          {filtered.length} transações ·{' '}
-          <span style={{ color: C.primary, fontWeight: 500 }}>{formatCurrency(total)}</span>
-        </p>
-      </div>
+      <PageHeader
+        title="Gastos"
+        subtitle={`${filtered.length} transações · ${formatCurrency(total)}`}
+      />
 
       {/* ── Filters ─────────────────────────────────────────────── */}
       <div style={{ padding: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
-        <select value={periodFilter} onChange={e => setPeriodFilter(e.target.value)} style={sel}>
+        <select value={periodFilter} onChange={e => setPeriodFilter(e.target.value)} style={inputStyle}>
           <option value="all">Todos os períodos</option>
           {periods.map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
         </select>
-        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={sel}>
+        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={inputStyle}>
           <option value="all">Todas as categorias</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
         </select>
@@ -140,14 +105,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
       {/* ── List ────────────────────────────────────────────────── */}
       <div style={{ padding: '4px 16px' }}>
         {filtered.length === 0 ? (
-          <div style={{
-            background: C.surface, border: `1px solid ${C.border}`,
-            borderRadius: 14, textAlign: 'center', padding: '48px 0', color: C.text3, fontSize: 14,
-            fontFamily: 'Inter, sans-serif',
-          }}>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>📭</div>
-            Nenhuma transação encontrada.
-          </div>
+          <EmptyState emoji="📭" text="Nenhuma transação encontrada." />
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
             {filtered.map(t => (
@@ -163,144 +121,84 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
         )}
       </div>
 
-      {/* ── Delete modal ────────────────────────────────────────── */}
       {/* ── Edit modal ─────────────────────────────────────────── */}
       {editTx && (
-        <div style={{
-          position: 'fixed', inset: 0, background: '#000000cc',
-          zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 20px',
-        }}>
-          <div style={{
-            background: '#141414', border: '1px solid #1e1e1e',
-            borderRadius: 16, padding: '24px 20px',
-            width: '100%', maxWidth: 360, fontFamily: 'Inter, sans-serif',
-          }}>
-            <div style={{ color: C.text, fontSize: 16, fontWeight: 600, fontFamily: 'Lora, Georgia, serif', marginBottom: 20 }}>
-              Editar transação
+        <Modal>
+          <div style={{ color: colors.text, fontSize: 16, fontWeight: 600, fontFamily: fonts.heading, marginBottom: 20 }}>
+            Editar transação
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Descrição</label>
+              <input value={editDesc} onChange={e => setEditDesc(e.target.value)} style={inputStyle} />
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 10, color: C.text3, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6, fontWeight: 500 }}>
-                  Descrição
-                </label>
-                <input
-                  value={editDesc}
-                  onChange={e => setEditDesc(e.target.value)}
-                  style={{ ...sel, padding: '11px 12px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 10, color: C.text3, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6, fontWeight: 500 }}>
-                  Valor
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editAmount}
-                  onChange={e => setEditAmount(e.target.value)}
-                  style={{ ...sel, padding: '11px 12px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 10, color: C.text3, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6, fontWeight: 500 }}>
-                  Categoria
-                </label>
-                <select
-                  value={editCategory}
-                  onChange={e => setEditCategory(e.target.value)}
-                  style={sel}
-                >
-                  <option value="">Sem categoria</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-                </select>
-              </div>
+            <div>
+              <label style={labelStyle}>Valor</label>
+              <input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} style={inputStyle} />
             </div>
-
-            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-              <button
-                onClick={() => setEditTx(null)}
-                style={{
-                  flex: 1, padding: 13, background: 'transparent',
-                  border: '1px solid #1e1e1e', color: C.text2,
-                  cursor: 'pointer', borderRadius: 10, fontSize: 13,
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !editDesc.trim() || !editAmount}
-                style={{
-                  flex: 1, padding: 13, background: C.primary,
-                  border: 'none', color: '#fff',
-                  cursor: 'pointer', borderRadius: 10, fontWeight: 600, fontSize: 13,
-                  opacity: (!editDesc.trim() || !editAmount) ? 0.4 : 1,
-                }}
-              >
-                {saving ? 'Salvando...' : 'Salvar'}
-              </button>
+            <div>
+              <label style={labelStyle}>Categoria</label>
+              <select value={editCategory} onChange={e => setEditCategory(e.target.value)} style={inputStyle}>
+                <option value="">Sem categoria</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+              </select>
             </div>
           </div>
-        </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+            <button onClick={() => setEditTx(null)} style={{ ...btnGhost, flex: 1, color: colors.text2 }}>
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !editDesc.trim() || !editAmount}
+              style={{ ...btnPrimary, flex: 1, opacity: (!editDesc.trim() || !editAmount) ? 0.4 : 1 }}
+            >
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </Modal>
       )}
 
+      {/* ── Delete modal ────────────────────────────────────────── */}
       {deleteId && (
-        <div style={{
-          position: 'fixed', inset: 0, background: '#000000cc',
-          zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 20px',
-        }}>
-          <div style={{
-            background: '#141414', border: '1px solid #1e1e1e',
-            borderRadius: 16, padding: '28px 24px',
-            width: '100%', maxWidth: 340, fontFamily: 'Inter, sans-serif', textAlign: 'center',
-          }}>
+        <Modal>
+          <div style={{ textAlign: 'center' }}>
             <div style={{
               width: 44, height: 44, borderRadius: '50%',
-              background: C.surface2,
+              background: colors.surface2,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 18, margin: '0 auto 14px',
             }}>🗑</div>
-            <div style={{ color: C.text, fontSize: 16, marginBottom: 6, fontWeight: 600, fontFamily: 'Lora, Georgia, serif' }}>
+            <div style={{ color: colors.text, fontSize: 16, marginBottom: 6, fontWeight: 600, fontFamily: fonts.heading }}>
               Excluir transação?
             </div>
-            <div style={{ fontSize: 13, color: C.text3, marginBottom: 24 }}>
+            <div style={{ fontSize: 13, color: colors.text3, marginBottom: 24 }}>
               Esta ação não pode ser desfeita.
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setDeleteId(null)}
-                style={{
-                  flex: 1, padding: 13, background: 'transparent',
-                  border: '1px solid #1e1e1e', color: C.text2,
-                  cursor: 'pointer', borderRadius: 10, fontFamily: 'Inter, sans-serif', fontSize: 13,
-                }}
-              >
+              <button onClick={() => setDeleteId(null)} style={{ ...btnGhost, flex: 1, color: colors.text2 }}>
                 Cancelar
               </button>
               <button
                 onClick={() => handleDelete(deleteId)} disabled={deleting}
                 style={{
-                  flex: 1, padding: 13, background: '#2a0a0a',
-                  border: '1px solid #4a1a1a', color: '#e07a7a',
-                  cursor: 'pointer', borderRadius: 10, fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
+                  flex: 1, padding: 13, background: colors.dangerBg,
+                  border: `1px solid ${colors.dangerBorder}`, color: colors.dangerText,
+                  cursor: 'pointer', borderRadius: 10, fontFamily: fonts.body, fontWeight: 600, fontSize: 13,
                 }}
               >
                 {deleting ? 'Excluindo...' : 'Excluir'}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
 }
 
-// ── Single transaction row ────────────────────────────────────
 function TransactionRow({ transaction: t, getCategory, onEdit, onDelete }: {
   transaction: Transaction
   getCategory: (id: string | null) => ReturnType<ReturnType<typeof useCategories>['getCategory']>
@@ -315,47 +213,39 @@ function TransactionRow({ transaction: t, getCategory, onEdit, onDelete }: {
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '12px 12px',
-        background: '#141414',
-        border: '1px solid #1e1e1e',
-        borderRadius: 12,
-        width: '100%', minWidth: 0,
-        cursor: 'pointer',
+        background: colors.surface, border: `1px solid ${colors.border}`,
+        borderRadius: 12, width: '100%', minWidth: 0, cursor: 'pointer',
       }}
     >
-      {/* Category icon */}
       <div style={{
         width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-        background: '#1e1e1e',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 16,
+        background: colors.surface2,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
       }}>
         {category?.emoji ?? '📦'}
       </div>
 
-      {/* Description + meta */}
       <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ fontSize: 13, color: '#e3e2df', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ fontSize: 13, color: colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500, fontFamily: fonts.body }}>
           {t.description}
         </div>
-        <div style={{ fontSize: 11, color: '#5a5a5a', marginTop: 2, fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ fontSize: 11, color: colors.text3, marginTop: 2, fontFamily: fonts.body }}>
           {t.date}
           {t.billing_period && ` · ${periodLabel(t.billing_period)}`}
           {t.installments > 1 && ` · ${t.installment_number}/${t.installments}x`}
         </div>
       </div>
 
-      {/* Amount + delete */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <div style={{ fontSize: 13, color: '#e3e2df', fontWeight: 600, whiteSpace: 'nowrap', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ fontSize: 13, color: colors.text, fontWeight: 600, whiteSpace: 'nowrap', fontFamily: fonts.body }}>
           {formatCurrency(t.amount)}
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(t.id) }}
           style={{
-            background: 'transparent', border: '1px solid #1e1e1e',
+            background: 'transparent', border: `1px solid ${colors.border}`,
             color: '#3a3a3a', cursor: 'pointer', fontSize: 10,
-            padding: '3px 6px', borderRadius: 6,
-            fontFamily: 'Inter, sans-serif', lineHeight: 1,
+            padding: '3px 6px', borderRadius: 6, fontFamily: fonts.body, lineHeight: 1,
           }}
           title="Excluir"
         >

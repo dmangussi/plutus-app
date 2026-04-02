@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
+import { colors, fonts } from '../styles/theme'
 
 interface LoadingCtx {
   loading: boolean
@@ -33,22 +34,20 @@ function LoadingOverlay({ message }: { message: string }) {
       position: 'fixed', inset: 0, zIndex: 9999,
       background: 'rgba(0,0,0,0.65)',
       display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      gap: 16,
+      alignItems: 'center', justifyContent: 'center', gap: 16,
     }}>
       <div style={{
         width: 40, height: 40,
-        border: '3px solid #1e1e1e',
-        borderTopColor: '#c96a3a',
+        border: `3px solid ${colors.border}`,
+        borderTopColor: colors.primary,
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
       }} />
       {message && (
         <p style={{
-          color: '#a0a0a0', fontSize: 14,
-          fontFamily: 'Inter, sans-serif',
-          margin: 0, textAlign: 'center',
-          padding: '0 32px',
+          color: colors.text2, fontSize: 14,
+          fontFamily: fonts.body,
+          margin: 0, textAlign: 'center', padding: '0 32px',
         }}>
           {message}
         </p>

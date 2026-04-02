@@ -41,7 +41,43 @@ All data access goes through Supabase client (`lib/supabase.ts`) using typed que
 Schema in `db/migrations/001_initial_schema.sql`. Tables: `family_members`, `cards`, `categories`, `transactions`, `category_memory`, `budgets`. Migrations are applied manually via Supabase SQL Editor. Types mirror the schema in `src/types/database.ts`.
 
 ### Styling
-Inline styles only (no CSS framework). Dark theme with color constants defined per component. Fonts: Lora (headings), Inter (body) loaded from Google Fonts in `index.html`.
+Inline styles only (no CSS framework). Dark theme with shared tokens in `styles/theme.ts` (colors, fonts) and `styles/common.ts` (base input/button/label styles). Fonts: Lora (headings), Inter (body) loaded from Google Fonts in `index.html`.
+
+### Shared components
+Reusable UI primitives in `components/`: `PageHeader`, `Modal`, `ErrorMessage`, `LoadingPlaceholder`, `EmptyState`. Always prefer these over inlining the same pattern.
+
+## Extreme Programming Guidelines
+
+These rules apply to **every** code change in this repo. Treat violations as bugs.
+
+### DRY — Don't Repeat Yourself
+- Never duplicate color values, font families, or style objects. Use `styles/theme.ts` and `styles/common.ts`.
+- If the same UI pattern appears in 2+ places, extract it to `components/`.
+- If the same data derivation appears in 2+ hooks/pages, extract a shared utility or hook.
+
+### YAGNI — You Ain't Gonna Need It
+- Do not add features, parameters, config flags, or abstractions "just in case".
+- Do not create wrapper functions, helper files, or indirection layers for one-time operations.
+- Three similar lines of code is better than a premature abstraction.
+
+### Simple Design
+- Each function/component does one thing. If a component exceeds ~150 lines, look for extraction opportunities.
+- Prefer flat code over deeply nested callbacks or ternaries.
+- No dead code, unused imports, or commented-out blocks. Delete instead of commenting.
+
+### Continuous Refactoring
+- Before adding new code, check if existing shared components/styles cover the need.
+- After finishing a feature, review the diff for new duplication introduced and eliminate it.
+- Keep `styles/theme.ts` as the single source of truth for visual tokens (colors, fonts, spacing).
+
+### Type Safety
+- No `as any`. Use `as never` only at Supabase query boundaries where the generated types mismatch.
+- No `eslint-disable` comments. Fix the root cause instead.
+- All new components must have typed props (no implicit `any`).
+
+### Small Releases
+- Each commit should be a single cohesive change that builds successfully (`npm run build`).
+- Verify the build passes before considering work done.
 
 ## Environment Variables
 
