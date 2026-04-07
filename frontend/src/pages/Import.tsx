@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
-import { useTransactions } from '../hooks/useTransactions'
 import { useLoading } from '../hooks/useLoading'
 import { PageHeader } from '../components/PageHeader'
 import { ErrorMessage } from '../components/ErrorMessage'
@@ -26,7 +25,6 @@ type Step = 'upload' | 'processing' | 'review'
 export default function Import({ onDone }: { onDone: () => void }) {
   const { categories } = useCategories()
   const { user }       = useAuth()
-  const { transactions } = useTransactions()
   const { show, hide } = useLoading()
 
   const [step,       setStep]       = useState<Step>('upload')
@@ -36,6 +34,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
   const [selected,   setSelected]   = useState<Record<string, boolean>>({})
   const [dragging,   setDragging]   = useState(false)
   const [saving,     setSaving]     = useState(false)
+  const [existingKeys, setExistingKeys] = useState<Set<string>>(new Set())
 
   const today = new Date()
   const [billingPeriod, setBillingPeriod] = useState(
@@ -50,9 +49,18 @@ export default function Import({ onDone }: { onDone: () => void }) {
     return periodKey(d.getFullYear(), d.getMonth() + 1)
   })
 
-  const existingKeys = new Set(
-    transactions.map(t => `${t.description}|${t.amount}|${t.date}`)
-  )
+  useEffect(() => {
+    const controller = new AbortController()
+    supabase
+      .from('transactions')
+      .select('description, amount, date')
+      .abortSignal(controller.signal)
+      .then(({ data }) => {
+        const rows = (data ?? []) as { description: string; amount: number; date: string }[]
+        setExistingKeys(new Set(rows.map(r => `${r.description}|${r.amount}|${r.date}`)))
+      })
+    return () => controller.abort()
+  }, [])
 
   function isDuplicate(c: Candidate) {
     return existingKeys.has(`${c.description}|${c.amount}|${c.date}`)

@@ -1,19 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useTransactions } from '../hooks/useTransactions'
 import { useCategories } from '../hooks/useCategories'
 import { useLoading } from '../hooks/useLoading'
 import { PageHeader } from '../components/PageHeader'
 import { LoadingPlaceholder } from '../components/LoadingPlaceholder'
 import { EmptyState } from '../components/EmptyState'
 import { Modal } from '../components/Modal'
-import { formatCurrency, periodLabel } from '../utils/format'
+import { formatCurrency, periodLabel, periodKey } from '../utils/format'
 import { colors, fonts } from '../styles/theme'
 import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
 import type { Transaction } from '../types/database'
 
 export default function Transactions({ initialCategoryFilter, initialPeriodFilter }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null }) {
-  const { transactions, loading, refetch } = useTransactions()
   const { categories, getCategory } = useCategories()
   const { show, hide } = useLoading()
 
@@ -25,28 +23,51 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     setPeriodFilter(initialPeriodFilter ?? 'all')
   }, [initialCategoryFilter, initialPeriodFilter])
 
-  const [deleteId,       setDeleteId]       = useState<string | null>(null)
-  const [deleting,       setDeleting]       = useState(false)
-  const [editTx,         setEditTx]         = useState<Transaction | null>(null)
-  const [editDesc,       setEditDesc]       = useState('')
-  const [editAmount,     setEditAmount]     = useState('')
-  const [editCategory,   setEditCategory]   = useState('')
-  const [saving,         setSaving]         = useState(false)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [deleteId,     setDeleteId]     = useState<string | null>(null)
+  const [deleting,     setDeleting]     = useState(false)
+  const [editTx,       setEditTx]       = useState<Transaction | null>(null)
+  const [editDesc,     setEditDesc]     = useState('')
+  const [editAmount,   setEditAmount]   = useState('')
+  const [editCategory, setEditCategory] = useState('')
+  const [saving,       setSaving]       = useState(false)
 
-  const periods = useMemo(() => {
-    const set = new Set(transactions.map(t => t.billing_period).filter(Boolean))
-    return Array.from(set).sort().reverse()
-  }, [transactions])
+  const periods = (() => {
+    const result: string[] = []
+    const now = new Date()
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      result.push(periodKey(d.getFullYear(), d.getMonth() + 1))
+    }
+    return result
+  })()
 
-  const filtered = useMemo(() => {
-    return transactions.filter(t => {
-      if (periodFilter   !== 'all' && t.billing_period !== periodFilter)   return false
-      if (categoryFilter !== 'all' && t.category_id    !== categoryFilter) return false
-      return true
+  // Fetch transactions with server-side filters
+  const fetchTransactions = useCallback((signal?: AbortSignal) => {
+    let query = supabase
+      .from('transactions')
+      .select('*')
+      .order('date', { ascending: false })
+
+    if (periodFilter !== 'all')   query = query.eq('billing_period', periodFilter)
+    if (categoryFilter !== 'all') query = query.eq('category_id', categoryFilter)
+    if (signal) query = query.abortSignal(signal)
+
+    query.then(({ data }) => {
+      setTransactions(data ?? [])
+      setLoading(false)
     })
-  }, [transactions, periodFilter, categoryFilter])
+  }, [periodFilter, categoryFilter])
 
-  const total = useMemo(() => filtered.reduce((sum, t) => sum + t.amount, 0), [filtered])
+  useEffect(() => {
+    const controller = new AbortController()
+    setLoading(true)
+    fetchTransactions(controller.signal)
+    return () => controller.abort()
+  }, [fetchTransactions])
+
+  const total = transactions.reduce((sum, t) => sum + t.amount, 0)
 
   function openEdit(t: Transaction) {
     setEditTx(t)
@@ -67,7 +88,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     hide()
     setSaving(false)
     setEditTx(null)
-    refetch()
+    fetchTransactions()
   }
 
   async function handleDelete(id: string) {
@@ -77,7 +98,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     hide()
     setDeleteId(null)
     setDeleting(false)
-    refetch()
+    fetchTransactions()
   }
 
   if (loading) return <LoadingPlaceholder />
@@ -87,7 +108,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 
       <PageHeader
         title="Gastos"
-        subtitle={`${filtered.length} transações · ${formatCurrency(total)}`}
+        subtitle={`${transactions.length} transações · ${formatCurrency(total)}`}
       />
 
       {/* ── Filters ─────────────────────────────────────────────── */}
@@ -104,11 +125,11 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 
       {/* ── List ────────────────────────────────────────────────── */}
       <div style={{ padding: '4px 16px' }}>
-        {filtered.length === 0 ? (
+        {transactions.length === 0 ? (
           <EmptyState emoji="📭" text="Nenhuma transação encontrada." />
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
-            {filtered.map(t => (
+            {transactions.map(t => (
               <TransactionRow
                 key={t.id}
                 transaction={t}

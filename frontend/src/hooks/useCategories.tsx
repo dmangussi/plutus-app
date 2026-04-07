@@ -7,13 +7,16 @@ export function useCategories() {
   const [loading, setLoading]       = useState(true)
 
   useEffect(() => {
+    const controller = new AbortController()
     supabase
       .from('categories')
       .select('*')
+      .abortSignal(controller.signal)
       .then(({ data }) => {
         setCategories(data ?? [])
         setLoading(false)
       })
+    return () => controller.abort()
   }, [])
 
   const getCategory = (id: string | null) =>

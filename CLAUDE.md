@@ -26,7 +26,7 @@ No test framework is configured. No linter is configured.
 No React Router. `App.tsx` holds a `view` state (`'dashboard' | 'transactions' | 'import'`) and conditionally renders the matching page component. Bottom nav bar switches views.
 
 ### Data layer
-All data access goes through Supabase client (`lib/supabase.ts`) using typed queries. Custom hooks (`useAuth`, `useTransactions`, `useCategories`) wrap Supabase calls. No global state management — hooks + local component state only. Mutations trigger `window.location.reload()` to resync.
+All data access goes through Supabase client (`lib/supabase.ts`) using typed queries. `useAuth` is a global Context provider (session). `useCategories` is a local hook (fetches on mount per page). Each page queries Supabase directly — no shared transaction state. Dashboard uses RPCs (`dashboard_summary`, `monthly_evolution`) for server-side aggregation instead of `SELECT *`. Transactions page uses server-side filters (`.eq()`). Import page fetches only deduplication columns (`description, amount, date`). All `useEffect` fetches use a `cancelled` flag to prevent StrictMode double-fetch. After mutations, pages refetch their own data.
 
 ### Authentication
 `useAuth()` hook wraps Supabase Auth (email/password). All database tables have Row-Level Security policies scoped to `auth.uid()`. If no session exists, `App.tsx` renders the `<Auth />` page.
@@ -38,7 +38,7 @@ All data access goes through Supabase client (`lib/supabase.ts`) using typed que
 4. User reviews AI suggestions, edits categories, then confirms insert to Supabase
 
 ### Database
-Schema in `db/migrations/001_initial_schema.sql`. Tables: `family_members`, `cards`, `categories`, `transactions`, `category_memory`, `budgets`. Migrations are applied manually via Supabase SQL Editor. Types mirror the schema in `src/types/database.ts`.
+Schema in `db/migrations/001_initial_schema.sql`. Tables: `family_members`, `cards`, `categories`, `transactions`, `category_memory`, `budgets`. RPCs in `db/migrations/002_dashboard_rpcs.sql`: `dashboard_summary(p_period)`, `monthly_evolution()`. Migrations are applied manually via Supabase SQL Editor. Types mirror the schema in `src/types/database.ts`.
 
 ### Styling
 Inline styles only (no CSS framework). Dark theme with shared tokens in `styles/theme.ts` (colors, fonts) and `styles/common.ts` (base input/button/label styles). Fonts: Lora (headings), Inter (body) loaded from Google Fonts in `index.html`.
