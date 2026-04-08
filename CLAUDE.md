@@ -14,11 +14,38 @@ npm run dev          # Vite dev server on http://localhost:5173
 npm run build        # TypeScript check + Vite production build
 npm run preview      # Preview production build
 
+# Quality checks (from frontend/) — run before committing
+npm run typecheck    # TypeScript type-check without emitting files
+npm run lint         # ESLint (TypeScript + React Hooks rules)
+
 # Docker alternative (from frontend/)
 docker-compose up    # Runs dev server in container on port 5173
 ```
 
-No test framework is configured. No linter is configured.
+## Testing
+
+**Runner:** Vitest (`npm run test` from `frontend/`). Executes in ~400ms.
+
+```bash
+npm run test       # Run all tests
+```
+
+**Scope — what is tested:**
+- Pure utility functions in `src/utils/`: `parseCSV`, `classify`, `mockClassify`, `formatCurrency`, `periodKey`, `periodLabel`
+- Test files: colocated `*.test.ts` alongside each source file
+
+**Scope — intentionally not tested:**
+- React components — no jsdom configured (YAGNI: bugs are immediately visible in the browser)
+- Supabase queries — external system; mocks would not test real behavior
+- `classifyWithAI` — integration-level (real HTTP), exercised manually during import flow
+- Hooks (`useAuth`, `useCategories`, etc.) — depend on Supabase context
+
+**Rules:**
+- Before committing, all three must pass: `npm run test`, `npm run lint`, `npm run typecheck`
+- Each `it` block tests one behavior. Use real Itaú-format strings in description tests.
+- When modifying an exported utility function, update its JSDoc in the same commit.
+- If a test reveals a bug in source, fix the source — never adjust the test to hide the bug.
+- Do not test unexported helpers directly; test them via the exported function they belong to.
 
 ## Architecture
 

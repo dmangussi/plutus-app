@@ -20,11 +20,6 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   const [periodFilter,   setPeriodFilter]   = useState(initialPeriodFilter ?? 'all')
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter ?? 'all')
 
-  useEffect(() => {
-    setCategoryFilter(initialCategoryFilter ?? 'all')
-    setPeriodFilter(initialPeriodFilter ?? 'all')
-  }, [initialCategoryFilter, initialPeriodFilter])
-
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading]           = useState(true)
   const [deleteId,     setDeleteId]     = useState<string | null>(null)

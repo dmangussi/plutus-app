@@ -4,25 +4,6 @@ import type { AIResult } from './csv'
 // Set to false when you have Anthropic credits
 export const USE_MOCK_AI = true
 
-// Maps raw description keywords to category — description is always derived from the original
-const MOCK_RULES: { keywords: string[]; categoryName: string }[] = [
-  { keywords: ['drogasil', 'farmacia', 'droga', 'pacheco'],                            categoryName: 'Saúde' },
-  { keywords: ['uber', '99pop', '99 pop'],                                              categoryName: 'Transporte' },
-  { keywords: ['posto', 'ipiranga', 'shell', 'petrobras'],                              categoryName: 'Transporte' },
-  { keywords: ['spotify'],                                                               categoryName: 'Assinaturas' },
-  { keywords: ['netflix'],                                                               categoryName: 'Assinaturas' },
-  { keywords: ['amazon prime', 'prime video'],                                          categoryName: 'Assinaturas' },
-  { keywords: ['youtube'],                                                               categoryName: 'Assinaturas' },
-  { keywords: ['disney'],                                                                categoryName: 'Assinaturas' },
-  { keywords: ['supermercado', 'mercado', 'extra', 'carrefour', 'atacadao', 'guaratu'], categoryName: 'Mercado' },
-  { keywords: ['padaria', 'panificadora', 'bakery', 'pastelaria', 'pastel'],            categoryName: 'Alimentação' },
-  { keywords: ['restaurante', 'burger', 'pizza', 'lanchonete', 'mcdonalds', 'subway'], categoryName: 'Restaurantes' },
-  { keywords: ['ifood', 'rappi'],                                                        categoryName: 'Restaurantes' },
-  { keywords: ['salao', 'barbearia', 'cabelo', 'beauty'],                               categoryName: 'Beleza' },
-  { keywords: ['cinema', 'ingresso', 'show', 'teatro'],                                 categoryName: 'Lazer' },
-  { keywords: ['escola', 'faculdade', 'curso', 'cambly'],                               categoryName: 'Educação' },
-  { keywords: ['aluguel', 'condominio', 'luz', 'energia', 'agua'],                     categoryName: 'Moradia' },
-]
 
 // Brazilian cities Itaú appends to merchant names (longest first to avoid partial matches)
 const CITY_SUFFIXES = [
@@ -39,12 +20,25 @@ const CITY_SUFFIXES = [
   'NITEROI', 'CAXIAS', 'BELEM', 'SERRA', 'BETIM',
 ]
 
-function stripCitySuffix(raw: string): string {
-  const upper = raw.toUpperCase()
+// Strips Itaú suffix: CIDADE+BR, ESTADO(2-letter)+BR, or just BR
+// City is tried first (longest match wins). State is only stripped when preceded by a non-letter (e.g. digit).
+function stripItauSuffix(s: string): string {
+  const upper = s.toUpperCase()
+
+  // 1. Try CITY+BR concatenated (e.g. "PASTELARIAUBERABABR")
   for (const city of CITY_SUFFIXES) {
-    if (upper.endsWith(city)) return raw.slice(0, raw.length - city.length)
+    const suffix = city + 'BR'
+    if (upper.endsWith(suffix)) return s.slice(0, s.length - suffix.length)
   }
-  return raw
+
+  // 2. Try STATE(2-letter)+BR preceded by a non-letter (e.g. "2913MGBR")
+  const stateMatch = s.match(/[^A-Za-z][A-Z]{2}BR$/i)
+  if (stateMatch) return s.slice(0, s.length - 4) // strip state(2)+BR(2)
+
+  // 3. Try just BR at end (e.g. "NETFLIXBR")
+  if (upper.endsWith('BR')) return s.slice(0, s.length - 2)
+
+  return s
 }
 
 function cleanDescription(raw: string): string {
@@ -53,11 +47,8 @@ function cleanDescription(raw: string): string {
   // Strip payment processor prefixes (e.g. "MERCPAGO *", "PG *NOME")
   s = s.replace(/^(MERCPAGO|PAGSEGURO|PAGSTAR|PICPAY|PG)\s*\*\s*/i, '')
 
-  // Strip country code and state code suffix (e.g. "MGBR", "BR")
-  s = s.replace(/[A-Z]{2}BR$/i, '').replace(/BR$/i, '').trim()
-
-  // Strip known Brazilian city names appended by Itaú
-  s = stripCitySuffix(s.trim())
+  // Strip Itaú city/state/BR suffix
+  s = stripItauSuffix(s)
 
   // Remove leftover long digit sequences and trailing symbols
   s = s.replace(/\d{3,}/g, '').replace(/[*_\-]+$/, '').replace(/\s{2,}/g, ' ').trim()
@@ -66,15 +57,15 @@ function cleanDescription(raw: string): string {
   return s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
 }
 
+/**
+ * Cleans raw Itaú descriptions and returns them as AIResult[].
+ * All items are classified as `categoryName: 'Outros'` — no keyword matching.
+ * The user reviews and assigns categories manually in the import review screen.
+ */
 export function mockClassify(items: { idx: number; description: string }[]): AIResult[] {
-  return items.map(item => {
-    const raw  = item.description.toLowerCase()
-    const rule = MOCK_RULES.find(r => r.keywords.some(k => raw.includes(k)))
-
-    return {
-      idx:          item.idx,
-      description:  cleanDescription(item.description),
-      categoryName: rule?.categoryName ?? 'Outros',
-    }
-  })
+  return items.map(item => ({
+    idx:          item.idx,
+    description:  cleanDescription(item.description),
+    categoryName: 'Outros',
+  }))
 }

@@ -17,7 +17,14 @@ export interface RawTransaction {
   amount:      number
 }
 
-// ── Itaú CSV format: date, description, amount ───────────────
+/**
+ * Parses an Itaú bank CSV export into transactions.
+ *
+ * Expected format: `date,description,amount` (first row is header and is skipped).
+ * Amount is always the last column (descriptions may contain commas).
+ * Rows with non-positive or non-numeric amounts are skipped.
+ * Rows matching IGNORE_PATTERNS (payments, refunds, credits) are excluded.
+ */
 export function parseCSV(text: string): RawTransaction[] {
   const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean).slice(1)
   const results: RawTransaction[] = []
@@ -100,7 +107,11 @@ ${list}`
   return JSON.parse(text.replace(/```json|```/g, '').trim())
 }
 
-// ── Switch: mock vs real API ──────────────────────────────────
+/**
+ * Routes to mock or real AI classification based on the `USE_MOCK_AI` flag.
+ * When `USE_MOCK_AI = true`: returns cleaned descriptions with `categoryName: 'Outros'`.
+ * When `USE_MOCK_AI = false`: calls Anthropic API via the Vite proxy.
+ */
 export async function classify(
   items: RawTransaction[],
   categoryNames: string[],
