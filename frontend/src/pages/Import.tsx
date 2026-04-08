@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
@@ -49,19 +49,6 @@ export default function Import({ onDone }: { onDone: () => void }) {
     return periodKey(d.getFullYear(), d.getMonth() + 1)
   })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    supabase
-      .from('transactions')
-      .select('description, amount, date')
-      .abortSignal(controller.signal)
-      .then(({ data }) => {
-        const rows = (data ?? []) as { description: string; amount: number; date: string }[]
-        setExistingKeys(new Set(rows.map(r => `${r.description}|${r.amount}|${r.date}`)))
-      })
-    return () => controller.abort()
-  }, [])
-
   function isDuplicate(c: Candidate) {
     return existingKeys.has(`${c.description}|${c.amount}|${c.date}`)
   }
@@ -72,7 +59,12 @@ export default function Import({ onDone }: { onDone: () => void }) {
     setProgress('Lendo arquivo CSV...')
     show('Processando CSV...')
     try {
-      const text = await file.text()
+      const [text, { data: txData }] = await Promise.all([
+        file.text(),
+        supabase.from('transactions').select('description, amount, date'),
+      ])
+      const rows = (txData ?? []) as { description: string; amount: number; date: string }[]
+      setExistingKeys(new Set(rows.map(r => `${r.description}|${r.amount}|${r.date}`)))
       const raw  = parseCSV(text)
       if (!raw.length) throw new Error('Nenhuma transação encontrada no arquivo.')
       setProgress(`${raw.length} transações encontradas. Classificando com IA...`)
@@ -226,7 +218,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gap: 5, maxHeight: '50vh', overflowY: 'auto', marginBottom: 14, paddingRight: 2 }}>
+            <div style={{ display: 'grid', gap: 5, maxHeight: '50vh', overflowY: 'auto', overflowX: 'hidden', marginBottom: 14, paddingRight: 2 }}>
               {candidates.map(c => {
                 const category = categories.find(cat => cat.id === c.categoryId)
                 const dup      = isDuplicate(c)
@@ -286,7 +278,7 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
     <div
       onClick={onToggle}
       style={{
-        display: 'flex', alignItems: 'center', gap: 8,
+        display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 10px',
         background: duplicate ? '#0e0e0e' : selected ? '#1a1208' : colors.surface,
         border: `1px solid ${duplicate ? colors.border : selected ? '#3a2a18' : colors.border}`,
@@ -309,36 +301,42 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
 
       <span style={{ fontSize: 14, flexShrink: 0 }}>{category?.emoji ?? '📦'}</span>
 
+      {/* Two-line layout */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: selected ? colors.text : colors.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: fonts.body }}>
-          {c.description}
+        {/* Line 1: description + amount */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+          <div style={{ fontSize: 12, color: selected ? colors.text : colors.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: fonts.body, fontWeight: 500 }}>
+            {c.description}
+          </div>
+          <div style={{ fontSize: 12, color: selected ? colors.text : '#3a3a3a', flexShrink: 0, fontWeight: selected ? 600 : 400, fontFamily: fonts.body }}>
+            {formatCurrency(c.amount)}
+          </div>
         </div>
-        <div style={{ fontSize: 10, color: '#3a3a3a', marginTop: 1, fontFamily: fonts.body }}>{c.date}</div>
-      </div>
-
-      {duplicate && (
-        <span style={{ fontSize: 9, color: '#5a8a5a', background: '#0e1a0e', border: '1px solid #1e3a1e', borderRadius: 4, padding: '2px 6px', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: fonts.body }}>
-          já importada
-        </span>
-      )}
-
-      <select
-        value={c.categoryId ?? ''}
-        onClick={e => e.stopPropagation()}
-        onChange={e => onCategoryChange(e.target.value)}
-        style={{
-          padding: '3px 5px', background: colors.bg,
-          border: `1px solid ${colors.border}`, color: colors.text2,
-          borderRadius: 5, fontSize: 10, fontFamily: fonts.body, maxWidth: 90,
-        }}
-      >
-        {categories.map(cat => (
-          <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
-        ))}
-      </select>
-
-      <div style={{ fontSize: 12, color: selected ? colors.text : '#3a3a3a', flexShrink: 0, minWidth: 60, textAlign: 'right', fontWeight: selected ? 600 : 400, fontFamily: fonts.body }}>
-        {formatCurrency(c.amount)}
+        {/* Line 2: date + category select */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: '#3a3a3a', fontFamily: fonts.body }}>{c.date}</span>
+            {duplicate && (
+              <span style={{ fontSize: 9, color: '#5a8a5a', background: '#0e1a0e', border: '1px solid #1e3a1e', borderRadius: 4, padding: '2px 6px', whiteSpace: 'nowrap', fontFamily: fonts.body }}>
+                já importada
+              </span>
+            )}
+          </div>
+          <select
+            value={c.categoryId ?? ''}
+            onClick={e => e.stopPropagation()}
+            onChange={e => onCategoryChange(e.target.value)}
+            style={{
+              padding: '2px 4px', background: colors.bg,
+              border: `1px solid ${colors.border}`, color: colors.text2,
+              borderRadius: 5, fontSize: 10, fontFamily: fonts.body, flexShrink: 0,
+            }}
+          >
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   )

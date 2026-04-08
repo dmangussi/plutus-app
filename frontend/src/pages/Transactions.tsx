@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useCategories } from '../hooks/useCategories'
+import { useAuth } from '../hooks/useAuth'
 import { useLoading } from '../hooks/useLoading'
 import { PageHeader } from '../components/PageHeader'
 import { LoadingPlaceholder } from '../components/LoadingPlaceholder'
@@ -13,6 +14,7 @@ import type { Transaction } from '../types/database'
 
 export default function Transactions({ initialCategoryFilter, initialPeriodFilter }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null }) {
   const { categories, getCategory } = useCategories()
+  const { user }       = useAuth()
   const { show, hide } = useLoading()
 
   const [periodFilter,   setPeriodFilter]   = useState(initialPeriodFilter ?? 'all')
@@ -32,6 +34,15 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   const [editAmount,   setEditAmount]   = useState('')
   const [editCategory, setEditCategory] = useState('')
   const [saving,       setSaving]       = useState(false)
+
+  const today = new Date().toISOString().slice(0, 10)
+  const [addOpen,      setAddOpen]      = useState(false)
+  const [newDesc,      setNewDesc]      = useState('')
+  const [newAmount,    setNewAmount]    = useState('')
+  const [newDate,      setNewDate]      = useState(today)
+  const [newPeriod,    setNewPeriod]    = useState('')
+  const [newCategory,  setNewCategory]  = useState('')
+  const [adding,       setAdding]       = useState(false)
 
   const periods = (() => {
     const result: string[] = []
@@ -101,6 +112,37 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     fetchTransactions()
   }
 
+  function openAdd() {
+    setNewDesc('')
+    setNewAmount('')
+    setNewDate(today)
+    setNewPeriod(periodFilter !== 'all' ? periodFilter : periods[0])
+    setNewCategory('')
+    setAddOpen(true)
+  }
+
+  async function handleAdd() {
+    setAdding(true)
+    show('Salvando transação...')
+    await supabase.from('transactions').insert({
+      user_id:            user!.id,
+      description:        newDesc,
+      raw_description:    null,
+      amount:             parseFloat(newAmount),
+      date:               newDate,
+      billing_period:     newPeriod,
+      category_id:        newCategory || null,
+      member_id:          null,
+      card_id:            null,
+      installments:       1,
+      installment_number: 1,
+    } as never)
+    hide()
+    setAdding(false)
+    setAddOpen(false)
+    fetchTransactions()
+  }
+
   if (loading) return <LoadingPlaceholder />
 
   return (
@@ -109,6 +151,19 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
       <PageHeader
         title="Gastos"
         subtitle={`${transactions.length} transações · ${formatCurrency(total)}`}
+        action={
+          <button
+            onClick={openAdd}
+            style={{
+              marginTop: 6,
+              width: 36, height: 36, borderRadius: '50%',
+              background: colors.primary, border: 'none',
+              color: '#fff', fontSize: 22, lineHeight: 1,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >+</button>
+        }
       />
 
       {/* ── Filters ─────────────────────────────────────────────── */}
@@ -141,6 +196,56 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
           </div>
         )}
       </div>
+
+      {/* ── Add modal ──────────────────────────────────────────── */}
+      {addOpen && (
+        <Modal>
+          <div style={{ color: colors.text, fontSize: 16, fontWeight: 600, fontFamily: fonts.heading, marginBottom: 20 }}>
+            Novo gasto
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Descrição</label>
+              <input value={newDesc} onChange={e => setNewDesc(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Valor</label>
+              <input type="number" step="0.01" min="0" value={newAmount} onChange={e => setNewAmount(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Data</label>
+              <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Período de fatura</label>
+              <select value={newPeriod} onChange={e => setNewPeriod(e.target.value)} style={inputStyle}>
+                {periods.map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Categoria</label>
+              <select value={newCategory} onChange={e => setNewCategory(e.target.value)} style={inputStyle}>
+                <option value="">Sem categoria</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+            <button onClick={() => setAddOpen(false)} style={{ ...btnGhost, flex: 1, color: colors.text2 }}>
+              Cancelar
+            </button>
+            <button
+              onClick={handleAdd}
+              disabled={adding || !newDesc.trim() || !newAmount || !newDate}
+              style={{ ...btnPrimary, flex: 1, opacity: (!newDesc.trim() || !newAmount || !newDate) ? 0.4 : 1 }}
+            >
+              {adding ? 'Salvando...' : 'Adicionar'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* ── Edit modal ─────────────────────────────────────────── */}
       {editTx && (
