@@ -26,11 +26,15 @@ function lastMonths(n: number): string[] {
   return result
 }
 
-export default function Dashboard({ onSignOut, onCategoryClick }: { onSignOut: () => void; onCategoryClick: (categoryId: string, period: string) => void }) {
+export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onCategoryClick }: {
+  onSignOut: () => void
+  activePeriod: string
+  onPeriodChange: (period: string) => void
+  onCategoryClick: (categoryId: string, period: string) => void
+}) {
   const { user } = useAuth()
 
   const periods = lastMonths(3)
-  const [activePeriod, setActivePeriod] = useState(periods[0])
   const [summary, setSummary]           = useState<SummaryRow[]>([])
   const [loading, setLoading]           = useState(true)
 
@@ -124,7 +128,7 @@ export default function Dashboard({ onSignOut, onCategoryClick }: { onSignOut: (
             return (
               <button
                 key={p}
-                onClick={() => setActivePeriod(p)}
+                onClick={() => onPeriodChange(p)}
                 style={{
                   padding: '6px 14px', fontSize: 12, borderRadius: 20,
                   cursor: 'pointer', fontFamily: fonts.body, whiteSpace: 'nowrap',
