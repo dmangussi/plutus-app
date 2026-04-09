@@ -12,12 +12,13 @@ import { colors, fonts } from '../styles/theme'
 import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
 import type { Transaction } from '../types/database'
 
-export default function Transactions({ initialCategoryFilter, initialPeriodFilter }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null }) {
+export default function Transactions({ initialCategoryFilter, initialPeriodFilter, onPeriodChange }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null; onPeriodChange?: (p: string) => void }) {
   const { categories, getCategory } = useCategories()
   const { user }       = useAuth()
   const { show, hide } = useLoading()
 
-  const [periodFilter,   setPeriodFilter]   = useState(initialPeriodFilter ?? 'all')
+  const currentPeriod = periodKey(new Date().getFullYear(), new Date().getMonth() + 1)
+  const [periodFilter,   setPeriodFilter]   = useState(initialPeriodFilter ?? currentPeriod)
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter ?? 'all')
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -56,7 +57,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
       .select('*')
       .order('date', { ascending: false })
 
-    if (periodFilter !== 'all')   query = query.eq('billing_period', periodFilter)
+    query = query.eq('billing_period', periodFilter)
     if (categoryFilter !== 'all') query = query.eq('category_id', categoryFilter)
     if (signal) query = query.abortSignal(signal)
 
@@ -111,7 +112,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     setNewDesc('')
     setNewAmount('')
     setNewDate(today)
-    setNewPeriod(periodFilter !== 'all' ? periodFilter : periods[0])
+    setNewPeriod(periodFilter)
     setNewCategory('')
     setAddOpen(true)
   }
@@ -160,8 +161,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 
       {/* ── Filters ─────────────────────────────────────────────── */}
       <div style={{ padding: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
-        <select value={periodFilter} onChange={e => setPeriodFilter(e.target.value)} style={inputStyle}>
-          <option value="all">Todos os períodos</option>
+        <select value={periodFilter} onChange={e => { setPeriodFilter(e.target.value); onPeriodChange?.(e.target.value) }} style={inputStyle}>
           {periods.map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
         </select>
         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={inputStyle}>

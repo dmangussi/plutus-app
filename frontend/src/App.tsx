@@ -20,8 +20,7 @@ export default function App() {
   const { user, loading, signOut } = useAuth()
   const [view, setView] = useState<View>('dashboard')
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
-  const [periodFilter, setPeriodFilter] = useState<string | null>(null)
-  const [dashboardPeriod, setDashboardPeriod] = useState(() => {
+  const [activePeriod, setActivePeriod] = useState(() => {
     const now = new Date()
     return periodKey(now.getFullYear(), now.getMonth() + 1)
   })
@@ -40,8 +39,8 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: colors.bg, color: colors.text }}>
 
       <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
-        {view === 'dashboard'    && <Dashboard onSignOut={signOut} activePeriod={dashboardPeriod} onPeriodChange={setDashboardPeriod} onCategoryClick={(categoryId, period) => { setCategoryFilter(categoryId); setPeriodFilter(period); setView('transactions') }} />}
-        {view === 'transactions' && <Transactions initialCategoryFilter={categoryFilter} initialPeriodFilter={periodFilter} />}
+        {view === 'dashboard'    && <Dashboard onSignOut={signOut} activePeriod={activePeriod} onPeriodChange={setActivePeriod} onCategoryClick={(categoryId, period) => { setCategoryFilter(categoryId); setActivePeriod(period); setView('transactions') }} />}
+        {view === 'transactions' && <Transactions initialCategoryFilter={categoryFilter} initialPeriodFilter={activePeriod} onPeriodChange={setActivePeriod} />}
         {view === 'import'       && <Import onDone={() => setView('dashboard')} />}
       </div>
 
@@ -57,7 +56,7 @@ export default function App() {
           return (
             <button
               key={v}
-              onClick={() => { setCategoryFilter(null); setPeriodFilter(null); setView(v) }}
+              onClick={() => { setCategoryFilter(null); setView(v) }}
               style={{
                 flex: 1,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
