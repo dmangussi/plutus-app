@@ -122,13 +122,10 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     await supabase.from('transactions').insert({
       user_id:            user!.id,
       description:        newDesc,
-      raw_description:    null,
       amount:             parseFloat(newAmount),
       date:               newDate,
       billing_period:     newPeriod,
       category_id:        newCategory || null,
-      member_id:          null,
-      card_id:            null,
       installments:       1,
       installment_number: 1,
     } as never)

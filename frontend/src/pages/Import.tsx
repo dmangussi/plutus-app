@@ -122,7 +122,6 @@ export default function Import({ onDone }: { onDone: () => void }) {
       .map(c => ({
         user_id:            user!.id,
         description:        c.description,
-        raw_description:    c.rawDescription,
         amount:             c.amount,
         date:               c.date,
         billing_period:     billingPeriod,
