@@ -23,6 +23,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading]           = useState(true)
+  const [everLoaded, setEverLoaded]     = useState(false)
   const [deleteId,     setDeleteId]     = useState<string | null>(null)
   const [deleting,     setDeleting]     = useState(false)
   const [editTx,       setEditTx]       = useState<Transaction | null>(null)
@@ -64,6 +65,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     query.then(({ data }) => {
       setTransactions(data ?? [])
       setLoading(false)
+      setEverLoaded(true)
     })
   }, [periodFilter, categoryFilter])
 
@@ -136,10 +138,10 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     fetchTransactions()
   }
 
-  if (loading) return <LoadingPlaceholder />
+  if (!everLoaded) return <LoadingPlaceholder />
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', overflowX: 'hidden' }}>
+    <div style={{ maxWidth: 480, margin: '0 auto', overflowX: 'hidden', opacity: loading ? 0.4 : 1, transition: 'opacity 0.25s' }}>
 
       <PageHeader
         title="Gastos"

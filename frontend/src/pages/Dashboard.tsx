@@ -35,8 +35,9 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
   const { user } = useAuth()
 
   const periods = lastMonths(4)
-  const [summary, setSummary]           = useState<SummaryRow[]>([])
-  const [loading, setLoading]           = useState(true)
+  const [summary, setSummary]     = useState<SummaryRow[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [everLoaded, setEverLoaded] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -47,6 +48,7 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
       .then(({ data }: { data: SummaryRow[] | null }) => {
         setSummary(data ?? [])
         setLoading(false)
+        setEverLoaded(true)
       })
     return () => controller.abort()
   }, [activePeriod])
@@ -59,10 +61,10 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
   const initials  = (user?.email ?? 'U').slice(0, 1).toUpperCase()
   const firstName = user?.email?.split('@')[0] ?? 'Usuário'
 
-  if (loading && summary.length === 0) return <LoadingPlaceholder />
+  if (!everLoaded) return <LoadingPlaceholder />
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto' }}>
+    <div style={{ maxWidth: 480, margin: '0 auto', opacity: loading ? 0.4 : 1, transition: 'opacity 0.25s' }}>
 
       {/* ── Header ──────────────────────────────────────────────── */}
       <div style={{ padding: '52px 20px 24px' }}>
