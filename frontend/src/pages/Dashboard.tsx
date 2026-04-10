@@ -19,7 +19,7 @@ interface SummaryRow {
 function lastMonths(n: number): string[] {
   const result: string[] = []
   const now = new Date()
-  for (let i = 0; i < n; i++) {
+  for (let i = -1; i < n - 1; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     result.push(periodKey(d.getFullYear(), d.getMonth() + 1))
   }
@@ -34,7 +34,7 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
 }) {
   const { user } = useAuth()
 
-  const periods = lastMonths(3)
+  const periods = lastMonths(4)
   const [summary, setSummary]           = useState<SummaryRow[]>([])
   const [loading, setLoading]           = useState(true)
 

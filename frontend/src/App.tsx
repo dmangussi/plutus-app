@@ -22,7 +22,7 @@ export default function App() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [activePeriod, setActivePeriod] = useState(() => {
     const now = new Date()
-    return periodKey(now.getFullYear(), now.getMonth() + 1)
+    return periodKey(now.getFullYear(), now.getMonth() + 2)
   })
 
   if (loading) {
