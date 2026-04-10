@@ -50,7 +50,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
   })
 
   function isDuplicate(c: Candidate) {
-    return existingKeys.has(`${c.description}|${c.amount}|${c.date}`)
+    return existingKeys.has(`${c.rawDescription}|${c.amount}|${c.date}`)
   }
 
   async function processFile(file: File) {
@@ -61,10 +61,10 @@ export default function Import({ onDone }: { onDone: () => void }) {
     try {
       const [text, { data: txData }] = await Promise.all([
         file.text(),
-        supabase.from('transactions').select('description, amount, date'),
+        supabase.from('transactions').select('raw_description, amount, date').eq('billing_period', billingPeriod),
       ])
-      const rows = (txData ?? []) as { description: string; amount: number; date: string }[]
-      setExistingKeys(new Set(rows.map(r => `${r.description}|${r.amount}|${r.date}`)))
+      const rows = (txData ?? []) as { raw_description: string | null; amount: number; date: string }[]
+      setExistingKeys(new Set(rows.filter(r => r.raw_description).map(r => `${r.raw_description}|${r.amount}|${r.date}`)))
       const raw  = parseCSV(text)
       if (!raw.length) throw new Error('Nenhuma transação encontrada no arquivo.')
       setProgress(`${raw.length} transações encontradas. Classificando com IA...`)
@@ -122,6 +122,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
       .map(c => ({
         user_id:            user!.id,
         description:        c.description,
+        raw_description:    c.rawDescription,
         amount:             c.amount,
         date:               c.date,
         billing_period:     billingPeriod,
