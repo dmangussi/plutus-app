@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseCSV, classify } from './csv'
+import { parseCSV } from './csv'
 
 const header = 'date,description,amount'
 
@@ -61,27 +61,5 @@ describe('parseCSV', () => {
 
   it('returns empty array for header-only input', () => {
     expect(parseCSV(header)).toHaveLength(0)
-  })
-})
-
-describe('classify', () => {
-  it('routes to mock when USE_MOCK_AI is true — returns Outros', async () => {
-    const items = [
-      { date: '2026-02-10', description: 'UBER', amount: 45.90 },
-      { date: '2026-02-11', description: 'NETFLIX', amount: 39.90 },
-    ]
-    const result = await classify(items, ['Transporte', 'Assinaturas', 'Outros'])
-    expect(result).toHaveLength(2)
-    result.forEach(r => expect(r.categoryName).toBe('Outros'))
-  })
-
-  it('preserves idx mapping (0, 1, 2...)', async () => {
-    const items = [
-      { date: '2026-02-10', description: 'A', amount: 10 },
-      { date: '2026-02-11', description: 'B', amount: 20 },
-      { date: '2026-02-12', description: 'C', amount: 30 },
-    ]
-    const result = await classify(items, [])
-    expect(result.map(r => r.idx)).toEqual([0, 1, 2])
   })
 })

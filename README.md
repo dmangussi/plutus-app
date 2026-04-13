@@ -1,24 +1,34 @@
 # ⚡ Plutus
 
-Family finance app — CSV import, AI classification, spending dashboards.
+Family finance tracker — CSV import, spending dashboards, category management.
 
 ## Structure
 
 | Folder | What it is |
 |--------|-----------|
-| `db/` | Database migrations (SQL scripts) |
-| `frontend/` | React + Vite app (Docker) |
-| `backend/` | Node.js + Express API (Docker) |
+| `db/` | Database migrations (SQL scripts for Supabase) |
+| `frontend/` | React + Vite + TypeScript SPA |
+| `backend/` | Node.js + Express API (proxies Supabase) |
+| `e2e/` | Playwright end-to-end tests |
 
 ## Stack
 
-- **Database**: PostgreSQL via Supabase
-- **Auth**: Supabase Auth
-- **Frontend**: React + Vite + TypeScript
-- **Backend**: Node.js + Express
-- **AI**: Anthropic Claude
-- **Deploy**: Vercel (frontend) + Railway (backend)
+- **Database**: PostgreSQL via Supabase (with Row-Level Security)
+- **Auth**: Supabase Auth (proxied through backend)
+- **Frontend**: React 18 + Vite + TypeScript
+- **Backend**: Node.js + Express (credentials never reach the browser)
+- **Deploy**: Vercel (frontend CDN + backend as serverless functions)
 
 ## Getting started
 
-See the README inside each folder.
+```bash
+# Backend
+cd backend && cp .env.example .env  # fill in SUPABASE_URL and SUPABASE_ANON_KEY
+npm install && npm run dev           # http://localhost:3001
+
+# Frontend (separate terminal)
+cd frontend && cp .env.example .env # VITE_API_URL=http://localhost:3001
+npm install && npm run dev           # http://localhost:5173
+```
+
+See `CLAUDE.md` for full architecture details and contribution guidelines.

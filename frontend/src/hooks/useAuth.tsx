@@ -1,47 +1,73 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import type { User, Session } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/api'
+
+interface User {
+  id: string
+  email: string
+}
 
 interface AuthState {
   user: User | null
-  session: Session | null
   loading: boolean
-  signUp:  (email: string, password: string) => ReturnType<typeof supabase.auth.signUp>
-  signIn:  (email: string, password: string) => ReturnType<typeof supabase.auth.signInWithPassword>
-  signOut: () => ReturnType<typeof supabase.auth.signOut>
+  signIn:  (email: string, password: string) => Promise<{ error?: string }>
+  signUp:  (email: string, password: string) => Promise<{ error?: string }>
+  signOut: () => Promise<void>
 }
 
 const AuthCtx = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser]       = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setSession(session)
-      setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setSession(session)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    const token = sessionStorage.getItem('plutus_token')
+    if (!token) { setLoading(false); return }
+    apiFetch('/api/auth/me')
+      .then(({ user }) => setUser(user))
+      .catch(() => sessionStorage.removeItem('plutus_token'))
+      .finally(() => setLoading(false))
   }, [])
 
+  async function signIn(email: string, password: string) {
+    try {
+      const data = await apiFetch('/api/auth/signin', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+      sessionStorage.setItem('plutus_token', data.access_token)
+      setUser(data.user)
+      return {}
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  async function signUp(email: string, password: string) {
+    try {
+      const data = await apiFetch('/api/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      })
+      if (data.access_token) {
+        sessionStorage.setItem('plutus_token', data.access_token)
+        setUser(data.user)
+      }
+      return {}
+    } catch (e) {
+      return { error: (e as Error).message }
+    }
+  }
+
+  async function signOut() {
+    await apiFetch('/api/auth/signout', { method: 'DELETE' }).catch(() => {})
+    sessionStorage.removeItem('plutus_token')
+    setUser(null)
+  }
+
   return (
-    <AuthCtx.Provider value={{
-      user, session, loading,
-      signUp:  (email, password) => supabase.auth.signUp({ email, password }),
-      signIn:  (email, password) => supabase.auth.signInWithPassword({ email, password }),
-      signOut: () => supabase.auth.signOut(),
-    }}>
+    <AuthCtx.Provider value={{ user, loading, signIn, signUp, signOut }}>
       {children}
     </AuthCtx.Provider>
   )

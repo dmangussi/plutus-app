@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/api'
 import { useCategories } from '../hooks/useCategories'
 import { useAuth } from '../hooks/useAuth'
 import { useLoading } from '../hooks/useLoading'
@@ -24,6 +24,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading]           = useState(true)
   const [everLoaded, setEverLoaded]     = useState(false)
+  const [error,        setError]        = useState('')
   const [deleteId,     setDeleteId]     = useState<string | null>(null)
   const [deleting,     setDeleting]     = useState(false)
   const [editTx,       setEditTx]       = useState<Transaction | null>(null)
@@ -51,29 +52,21 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     return result
   })()
 
-  // Fetch transactions with server-side filters
-  const fetchTransactions = useCallback((signal?: AbortSignal) => {
-    let query = supabase
-      .from('transactions')
-      .select('*')
-      .order('date', { ascending: false })
-
-    query = query.eq('billing_period', periodFilter)
-    if (categoryFilter !== 'all') query = query.eq('category_id', categoryFilter)
-    if (signal) query = query.abortSignal(signal)
-
-    query.then(({ data }) => {
-      setTransactions(data ?? [])
-      setLoading(false)
-      setEverLoaded(true)
-    })
+  const fetchTransactions = useCallback(() => {
+    let url = `/api/transactions?period=${periodFilter}`
+    if (categoryFilter !== 'all') url += `&category=${categoryFilter}`
+    apiFetch(url)
+      .then((data: Transaction[]) => {
+        setTransactions(data ?? [])
+        setLoading(false)
+        setEverLoaded(true)
+      })
+      .catch(() => setLoading(false))
   }, [periodFilter, categoryFilter])
 
   useEffect(() => {
-    const controller = new AbortController()
     setLoading(true)
-    fetchTransactions(controller.signal)
-    return () => controller.abort()
+    fetchTransactions()
   }, [fetchTransactions])
 
   const total = transactions.reduce((sum, t) => sum + t.amount, 0)
@@ -87,13 +80,14 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 
   async function handleSave() {
     if (!editTx) return
+    const amount = parseFloat(editAmount)
+    if (isNaN(amount) || amount <= 0 || amount > 999999.99) { setError('Valor inválido.'); return }
     setSaving(true)
     show('Salvando alterações...')
-    await supabase.from('transactions').update({
-      description: editDesc,
-      amount: parseFloat(editAmount),
-      category_id: editCategory || null,
-    } as never).eq('id', editTx.id)
+    await apiFetch(`/api/transactions/${editTx.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ description: editDesc, amount, category_id: editCategory || null }),
+    })
     hide()
     setSaving(false)
     setEditTx(null)
@@ -103,7 +97,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   async function handleDelete(id: string) {
     setDeleting(true)
     show('Excluindo transação...')
-    await supabase.from('transactions').delete().eq('id', id)
+    await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' })
     hide()
     setDeleteId(null)
     setDeleting(false)
@@ -116,22 +110,28 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     setNewDate(today)
     setNewPeriod(periodFilter)
     setNewCategory('')
+    setError('')
     setAddOpen(true)
   }
 
   async function handleAdd() {
+    const amount = parseFloat(newAmount)
+    if (isNaN(amount) || amount <= 0 || amount > 999999.99) { setError('Valor inválido.'); return }
     setAdding(true)
     show('Salvando transação...')
-    await supabase.from('transactions').insert({
-      user_id:            user!.id,
-      description:        newDesc,
-      amount:             parseFloat(newAmount),
-      date:               newDate,
-      billing_period:     newPeriod,
-      category_id:        newCategory || null,
-      installments:       1,
-      installment_number: 1,
-    } as never)
+    await apiFetch('/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id:            user!.id,
+        description:        newDesc,
+        amount,
+        date:               newDate,
+        billing_period:     newPeriod,
+        category_id:        newCategory || null,
+        installments:       1,
+        installment_number: 1,
+      }),
+    })
     hide()
     setAdding(false)
     setAddOpen(false)
@@ -205,7 +205,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
             </div>
             <div>
               <label style={labelStyle}>Valor</label>
-              <input type="number" step="0.01" min="0" value={newAmount} onChange={e => setNewAmount(e.target.value)} style={inputStyle} />
+              <input type="number" step="0.01" min="0.01" max="999999.99" value={newAmount} onChange={e => setNewAmount(e.target.value)} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Data</label>
@@ -224,6 +224,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
                 {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
               </select>
             </div>
+            {error && <div style={{ fontSize: 12, color: colors.dangerText }}>{error}</div>}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
@@ -255,7 +256,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
             </div>
             <div>
               <label style={labelStyle}>Valor</label>
-              <input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} style={inputStyle} />
+              <input type="number" step="0.01" min="0.01" max="999999.99" value={editAmount} onChange={e => setEditAmount(e.target.value)} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Categoria</label>
@@ -264,6 +265,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
                 {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
               </select>
             </div>
+            {error && <div style={{ fontSize: 12, color: colors.dangerText }}>{error}</div>}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>

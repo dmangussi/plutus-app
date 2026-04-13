@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
 import { useLoading } from '../hooks/useLoading'
 import { PageHeader } from '../components/PageHeader'
 import { ErrorMessage } from '../components/ErrorMessage'
-import { parseCSV, classify } from '../utils/csv'
+import { parseCSV } from '../utils/csv'
 import { formatCurrency, periodKey } from '../utils/format'
 import { colors, fonts } from '../styles/theme'
 import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
@@ -20,7 +20,7 @@ interface Candidate {
   categoryId:     string | null
 }
 
-type Step = 'upload' | 'processing' | 'review'
+type Step = 'upload' | 'review'
 
 export default function Import({ onDone }: { onDone: () => void }) {
   const { categories } = useCategories()
@@ -28,7 +28,6 @@ export default function Import({ onDone }: { onDone: () => void }) {
   const { show, hide } = useLoading()
 
   const [step,       setStep]       = useState<Step>('upload')
-  const [progress,   setProgress]   = useState('')
   const [error,      setError]      = useState('')
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [selected,   setSelected]   = useState<Record<string, boolean>>({})
@@ -55,44 +54,36 @@ export default function Import({ onDone }: { onDone: () => void }) {
 
   async function processFile(file: File) {
     setError('')
-    setStep('processing')
-    setProgress('Lendo arquivo CSV...')
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Arquivo muito grande. Máximo 5MB.')
+      return
+    }
     show('Processando CSV...')
     try {
-      const [text, { data: txData }] = await Promise.all([
+      const [text, dedupData] = await Promise.all([
         file.text(),
-        supabase.from('transactions').select('raw_description, amount, date').eq('billing_period', billingPeriod),
+        apiFetch(`/api/transactions?period=${billingPeriod}&dedup=true`) as Promise<{ raw_description: string | null; amount: number; date: string }[]>,
       ])
-      const rows = (txData ?? []) as { raw_description: string | null; amount: number; date: string }[]
-      setExistingKeys(new Set(rows.filter(r => r.raw_description).map(r => `${r.raw_description}|${r.amount}|${r.date}`)))
-      const raw  = parseCSV(text)
+      setExistingKeys(new Set(
+        dedupData.filter(r => r.raw_description).map(r => `${r.raw_description}|${r.amount}|${r.date}`)
+      ))
+      const raw = parseCSV(text)
       if (!raw.length) throw new Error('Nenhuma transação encontrada no arquivo.')
-      setProgress(`${raw.length} transações encontradas. Classificando com IA...`)
-      show('Classificando com IA...')
-      const categoryNames = [...new Set(categories.map(c => c.name))]
-      const aiResults     = await classify(raw, categoryNames)
-      const items: Candidate[] = raw.map((r, i) => {
-        const ai       = aiResults.find(a => a.idx === i)
-        const category = categories.find(c => c.name === ai?.categoryName)
-          ?? categories.find(c => c.name === 'Outros')
-          ?? null
-        return {
-          tempId:         `${Date.now()}-${i}`,
-          description:    ai?.description ?? r.description,
-          rawDescription: r.description,
-          amount:         r.amount,
-          date:           r.date,
-          categoryId:     category?.id ?? null,
-        }
-      })
+      const items: Candidate[] = raw.map((r, i) => ({
+        tempId:         `${Date.now()}-${i}`,
+        description:    r.description,
+        rawDescription: r.description,
+        amount:         r.amount,
+        date:           r.date,
+        categoryId:     categories.find(c => c.name === 'Outros')?.id ?? null,
+      }))
       setCandidates(items)
-      setSelected(Object.fromEntries(items.map(it => [it.tempId, !isDuplicate(it)])))
+      setSelected(Object.fromEntries(items.map(it => [it.tempId, true])))
       hide()
       setStep('review')
     } catch (e) {
       hide()
       setError('Erro: ' + (e as Error).message)
-      setStep('upload')
     }
   }
 
@@ -130,11 +121,16 @@ export default function Import({ onDone }: { onDone: () => void }) {
         installments:       1,
         installment_number: 1,
       }))
-    const { error } = await supabase.from('transactions').insert(toInsert as never)
-    hide()
-    if (error) { setError('Erro ao salvar: ' + error.message); setSaving(false); return }
-    setSaving(false)
-    onDone()
+    try {
+      await apiFetch('/api/transactions/batch', { method: 'POST', body: JSON.stringify(toInsert) })
+      hide()
+      setSaving(false)
+      onDone()
+    } catch (e) {
+      hide()
+      setError('Erro ao salvar: ' + (e as Error).message)
+      setSaving(false)
+    }
   }
 
   const selectedList   = candidates.filter(c => selected[c.tempId])
@@ -194,14 +190,6 @@ export default function Import({ onDone }: { onDone: () => void }) {
                 <ErrorMessage message={error} />
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── PROCESSING ── */}
-        {step === 'processing' && (
-          <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <div style={{ fontSize: 28, marginBottom: 16, color: colors.primary }}>✳</div>
-            <div style={{ color: colors.text2, fontSize: 14, fontFamily: fonts.body }}>{progress}</div>
           </div>
         )}
 
@@ -288,7 +276,6 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
         transition: 'all .15s',
       }}
     >
-      {/* Checkbox */}
       <div style={{
         width: 16, height: 16, borderRadius: 4, flexShrink: 0,
         border: `1.5px solid ${selected ? colors.primary : colors.border2}`,
@@ -301,9 +288,7 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
 
       <span style={{ fontSize: 14, flexShrink: 0 }}>{category?.emoji ?? '📦'}</span>
 
-      {/* Two-line layout */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Line 1: description + amount */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
           <div style={{ fontSize: 12, color: selected ? colors.text : colors.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: fonts.body, fontWeight: 500 }}>
             {c.description}
@@ -312,7 +297,6 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
             {formatCurrency(c.amount)}
           </div>
         </div>
-        {/* Line 2: date + category select */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 10, color: '#3a3a3a', fontFamily: fonts.body }}>{c.date}</span>

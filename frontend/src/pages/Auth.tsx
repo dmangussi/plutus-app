@@ -25,7 +25,7 @@ export default function Auth() {
       ? await signIn(email, password)
       : await signUp(email, password)
     hide()
-    if (error) setError(error.message)
+    if (error) setError(error)
     setLoading(false)
   }
 

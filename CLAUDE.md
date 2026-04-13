@@ -4,41 +4,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Plutus is a family finance tracker (Brazilian Portuguese UI). React 18 + Vite + TypeScript frontend talking directly to Supabase (PostgreSQL + Auth). AI-powered CSV import classifies transactions via Anthropic Claude API. No backend server yet.
+Plutus is a family finance tracker (Brazilian Portuguese UI). React 18 + Vite + TypeScript frontend communicating with a Node.js + Express backend, which proxies all Supabase (PostgreSQL + Auth) operations. The browser never sees database credentials. CSV import parses Itaú bank exports; users assign categories manually.
 
 ## Commands
 
 ```bash
-# Development (from frontend/)
-npm run dev          # Vite dev server on http://localhost:5173
-npm run build        # TypeScript check + Vite production build
-npm run preview      # Preview production build
+# Backend (from backend/)
+npm install
+npm run dev        # Express API on http://localhost:3001
+
+# Frontend (from frontend/)
+npm install
+npm run dev        # Vite dev server on http://localhost:5173
+npm run build      # TypeScript check + Vite production build
+npm run preview    # Preview production build
 
 # Quality checks (from frontend/) — run before committing
-npm run typecheck    # TypeScript type-check without emitting files
-npm run lint         # ESLint (TypeScript + React Hooks rules)
+npm run typecheck  # TypeScript type-check without emitting files
+npm run lint       # ESLint (TypeScript + React Hooks rules)
+npm run test       # Vitest unit tests
 
-# Docker alternative (from frontend/)
-docker-compose up    # Runs dev server in container on port 5173
+# Deploy
+vercel --prod      # from repo root
 ```
 
 ## Testing
 
-**Runner:** Vitest (`npm run test` from `frontend/`). Executes in ~400ms.
-
-```bash
-npm run test       # Run all tests
-```
+**Unit tests — Runner:** Vitest (`npm run test` from `frontend/`). Executes in ~400ms.
 
 **Scope — what is tested:**
-- Pure utility functions in `src/utils/`: `parseCSV`, `classify`, `mockClassify`, `formatCurrency`, `periodKey`, `periodLabel`
+- Pure utility functions in `src/utils/`: `parseCSV`, `formatCurrency`, `periodKey`, `periodLabel`
 - Test files: colocated `*.test.ts` alongside each source file
 
 **Scope — intentionally not tested:**
 - React components — no jsdom configured (YAGNI: bugs are immediately visible in the browser)
-- Supabase queries — external system; mocks would not test real behavior
-- `classifyWithAI` — integration-level (real HTTP), exercised manually during import flow
-- Hooks (`useAuth`, `useCategories`, etc.) — depend on Supabase context
+- Backend routes — exercised by E2E tests against a real Supabase test project
+- Hooks (`useAuth`, `useCategories`, etc.) — depend on API fetch context
+
+**E2E tests — Runner:** Playwright (`npm test` from `e2e/`).
+- Requires backend + frontend running (auto-started via `webServer` config)
+- Uses a dedicated Supabase test project (credentials in `e2e/.env.test`)
 
 **Rules:**
 - Before committing, all three must pass: `npm run test`, `npm run lint`, `npm run typecheck`
@@ -53,19 +58,22 @@ npm run test       # Run all tests
 No React Router. `App.tsx` holds a `view` state (`'dashboard' | 'transactions' | 'import'`) and conditionally renders the matching page component. Bottom nav bar switches views.
 
 ### Data layer
-All data access goes through Supabase client (`lib/supabase.ts`) using typed queries. `useAuth` is a global Context provider (session). `useCategories` is a local hook (fetches on mount per page). Each page queries Supabase directly — no shared transaction state. Dashboard uses RPCs (`dashboard_summary`, `monthly_evolution`) for server-side aggregation instead of `SELECT *`. Transactions page uses server-side filters (`.eq()`). Import page fetches only deduplication columns (`description, amount, date`). All `useEffect` fetches use a `cancelled` flag to prevent StrictMode double-fetch. After mutations, pages refetch their own data.
+All data access goes through the Express backend at `/api/*`. Frontend uses `lib/api.ts` (`apiFetch`) for every request — credentials never reach the browser. `useAuth` is a global Context provider (session token stored in `sessionStorage`). `useCategories` is a local hook with a module-level cache. Each page calls `apiFetch` directly — no shared transaction state. After mutations, pages refetch their own data.
 
 ### Authentication
-`useAuth()` hook wraps Supabase Auth (email/password). All database tables have Row-Level Security policies scoped to `auth.uid()`. If no session exists, `App.tsx` renders the `<Auth />` page.
+`useAuth()` calls `/api/auth/*`. On mount it reads the token from `sessionStorage` and validates it via `GET /api/auth/me`. On sign-in, the backend returns `{access_token, user}` which is stored in `sessionStorage`. All subsequent requests include `Authorization: Bearer {token}`. The backend creates a Supabase client scoped to that JWT, so RLS policies are enforced transparently.
 
-### CSV Import + AI Classification
+### CSV Import
 1. `parseCSV()` in `utils/csv.ts` parses Itaú bank CSV format
-2. `classify()` routes to real AI or mock based on `USE_MOCK_AI` flag in `utils/mockClassification.ts`
-3. Real AI calls `/api/anthropic/v1/messages` — Vite proxies this to `https://api.anthropic.com` (configured in `vite.config.ts`) adding auth headers
-4. User reviews AI suggestions, edits categories, then confirms insert to Supabase
+2. User reviews all parsed transactions and assigns categories manually
+3. Duplicate detection uses `raw_description|amount|date` scoped to the selected `billing_period`
+4. Confirmed transactions are batch-inserted via `POST /api/transactions/batch`
+
+### Backend (Express)
+Routes in `backend/src/routes/`: `auth`, `categories`, `transactions`, `dashboard`. All data routes require a Bearer token (`middleware/auth.ts`). The Supabase client is created per-request with the user's JWT (`lib/supabase.ts`), preserving RLS. The backend exports the Express app as default — Vercel runs it as serverless; locally it binds to port 3001.
 
 ### Database
-Schema in `db/migrations/001_initial_schema.sql`. Tables: `family_members`, `cards`, `categories`, `transactions`, `category_memory`, `budgets`. RPCs in `db/migrations/002_dashboard_rpcs.sql`: `dashboard_summary(p_period)`, `monthly_evolution()`. Migrations are applied manually via Supabase SQL Editor. Types mirror the schema in `src/types/database.ts`.
+Schema in `db/migrations/001_initial_schema.sql`. Active tables: `categories`, `transactions`. RPC in `db/migrations/002_dashboard_rpcs.sql`: `dashboard_summary(p_period)`. Migrations are applied manually via Supabase SQL Editor. Types mirror the schema in `src/types/database.ts`.
 
 ### Styling
 Inline styles only (no CSS framework). Dark theme with shared tokens in `styles/theme.ts` (colors, fonts) and `styles/common.ts` (base input/button/label styles). Fonts: Lora (headings), Inter (body) loaded from Google Fonts in `index.html`.
@@ -98,7 +106,7 @@ These rules apply to **every** code change in this repo. Treat violations as bug
 - Keep `styles/theme.ts` as the single source of truth for visual tokens (colors, fonts, spacing).
 
 ### Type Safety
-- No `as any`. Use `as never` only at Supabase query boundaries where the generated types mismatch.
+- No `as any`. Use `as never` only at API response boundaries where types mismatch.
 - No `eslint-disable` comments. Fix the root cause instead.
 - All new components must have typed props (no implicit `any`).
 
@@ -108,7 +116,18 @@ These rules apply to **every** code change in this repo. Treat violations as bug
 
 ## Environment Variables
 
-Required in `frontend/.env`:
-- `VITE_SUPABASE_URL` — Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous key
-- `ANTHROPIC_API_KEY` — For AI classification (server-side proxy only)
+```bash
+# frontend/.env (dev only — not committed)
+VITE_API_URL=http://localhost:3001
+
+# backend/.env (dev only — not committed)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
+FRONTEND_URL=http://localhost:5173
+PORT=3001
+
+# Vercel (production) — set in Vercel dashboard
+SUPABASE_URL
+SUPABASE_ANON_KEY
+FRONTEND_URL
+```

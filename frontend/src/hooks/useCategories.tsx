@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/api'
 import type { Category } from '../types/database'
 
 let cache: Category[] | null = null
@@ -11,15 +11,13 @@ export function useCategories() {
   useEffect(() => {
     if (cache !== null) return
     const controller = new AbortController()
-    supabase
-      .from('categories')
-      .select('*')
-      .abortSignal(controller.signal)
-      .then(({ data }) => {
+    apiFetch('/api/categories')
+      .then((data: Category[]) => {
         cache = data ?? []
         setCategories(cache)
         setLoading(false)
       })
+      .catch(() => setLoading(false))
     return () => controller.abort()
   }, [])
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import { LoadingPlaceholder } from '../components/LoadingPlaceholder'
 import { EmptyState } from '../components/EmptyState'
@@ -42,14 +42,13 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
   useEffect(() => {
     const controller = new AbortController()
     setLoading(true)
-    supabase
-      .rpc('dashboard_summary' as never, { p_period: activePeriod } as never)
-      .abortSignal(controller.signal)
-      .then(({ data }: { data: SummaryRow[] | null }) => {
+    apiFetch(`/api/dashboard?period=${activePeriod}`)
+      .then((data: SummaryRow[]) => {
         setSummary(data ?? [])
         setLoading(false)
         setEverLoaded(true)
       })
+      .catch(() => setLoading(false))
     return () => controller.abort()
   }, [activePeriod])
 
