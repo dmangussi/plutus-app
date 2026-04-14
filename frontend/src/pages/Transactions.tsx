@@ -250,6 +250,12 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {editTx.raw_description && (
+              <div>
+                <label style={labelStyle}>Descrição original</label>
+                <input readOnly value={editTx.raw_description} style={{ ...inputStyle, opacity: 0.5, cursor: 'default' }} />
+              </div>
+            )}
             <div>
               <label style={labelStyle}>Descrição</label>
               <input value={editDesc} onChange={e => setEditDesc(e.target.value)} style={inputStyle} />
