@@ -281,7 +281,7 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
         border: `1.5px solid ${selected ? colors.primary : colors.border2}`,
         background: selected ? colors.primary : 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 9, color: '#fff', fontWeight: 700,
+        fontSize: 9, color: '#141414', fontWeight: 700,
       }}>
         {selected ? '✓' : ''}
       </div>

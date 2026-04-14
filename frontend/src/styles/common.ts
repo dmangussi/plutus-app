@@ -19,7 +19,7 @@ export const btnPrimary: React.CSSProperties = {
   padding: '13px 0',
   background: colors.primary,
   border: 'none',
-  color: '#fff',
+  color: '#141414',
   borderRadius: 10,
   cursor: 'pointer',
   fontFamily: fonts.body,

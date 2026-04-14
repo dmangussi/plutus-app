@@ -153,7 +153,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
               marginTop: 6,
               width: 36, height: 36, borderRadius: '50%',
               background: colors.primary, border: 'none',
-              color: '#fff', fontSize: 22, lineHeight: 1,
+              color: '#141414', fontSize: 22, lineHeight: 1,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}

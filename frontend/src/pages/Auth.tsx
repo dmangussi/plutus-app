@@ -7,18 +7,71 @@ import { inputStyle, btnPrimary } from '../styles/common'
 
 type Mode = 'signin' | 'signup'
 
+function PasswordField({ value, onChange, placeholder, show, onToggle }: {
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  placeholder: string
+  show: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type={show ? 'text' : 'password'}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required
+        style={{ ...inputStyle, background: colors.bg, padding: '13px 42px 13px 14px', fontSize: 14, transition: 'border-color .15s' }}
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={show ? 'Ocultar senha' : 'Mostrar senha'}
+        style={{
+          position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: colors.text3, fontSize: 16, padding: 0, lineHeight: 1,
+        }}
+      >
+        {show ? '🙈' : '👁'}
+      </button>
+    </div>
+  )
+}
+
 export default function Auth() {
   const { signIn, signUp } = useAuth()
   const { show, hide } = useLoading()
-  const [mode, setMode]         = useState<Mode>('signin')
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError]       = useState<string | null>(null)
-  const [loading, setLoading]   = useState(false)
+
+  const [mode, setMode]                   = useState<Mode>('signin')
+  const [email, setEmail]                 = useState('')
+  const [password, setPassword]           = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword]   = useState(false)
+  const [showConfirm, setShowConfirm]     = useState(false)
+  const [error, setError]                 = useState<string | null>(null)
+  const [loading, setLoading]             = useState(false)
+
+  function switchMode(m: Mode) {
+    setMode(m)
+    setEmail('')
+    setPassword('')
+    setConfirmPassword('')
+    setShowPassword(false)
+    setShowConfirm(false)
+    setError(null)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    if (mode === 'signup') {
+      if (password.length < 6) { setError('Senha deve ter pelo menos 6 caracteres.'); return }
+      if (password !== confirmPassword) { setError('As senhas não coincidem.'); return }
+    }
+
     setLoading(true)
     show(mode === 'signin' ? 'Entrando...' : 'Criando conta...')
     const { error } = mode === 'signin'
@@ -37,6 +90,8 @@ export default function Auth() {
     transition: 'border-color .15s',
   }
 
+  const submitDisabled = loading || !email.trim() || !password.trim() || (mode === 'signup' && !confirmPassword.trim())
+
   return (
     <div style={{
       minHeight: '100vh', background: colors.bg,
@@ -47,7 +102,7 @@ export default function Auth() {
 
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
-        <div style={{ fontSize: 36, color: colors.primary, marginBottom: 16, lineHeight: 1 }}>✳</div>
+        <div style={{ fontSize: 36, marginBottom: 16, lineHeight: 1 }}>🪙</div>
         <h1 style={{
           fontFamily: fonts.heading, fontSize: 32, fontWeight: 600,
           color: colors.text, letterSpacing: -0.5, marginBottom: 8,
@@ -75,7 +130,7 @@ export default function Auth() {
           {(['signin', 'signup'] as Mode[]).map(m => (
             <button
               key={m}
-              onClick={() => { setMode(m); setError(null) }}
+              onClick={() => switchMode(m)}
               style={{
                 flex: 1, padding: '9px 0', border: 'none', borderRadius: 8,
                 cursor: 'pointer', fontFamily: fonts.body,
@@ -95,21 +150,34 @@ export default function Auth() {
             value={email} onChange={e => setEmail(e.target.value)}
             required style={fieldStyle}
           />
-          <input
-            type="password" placeholder="Senha"
-            value={password} onChange={e => setPassword(e.target.value)}
-            required style={fieldStyle}
+
+          <PasswordField
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Senha"
+            show={showPassword}
+            onToggle={() => setShowPassword(v => !v)}
           />
+
+          {mode === 'signup' && (
+            <PasswordField
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Confirmar senha"
+              show={showConfirm}
+              onToggle={() => setShowConfirm(v => !v)}
+            />
+          )}
 
           {error && <ErrorMessage message={error} />}
 
           <button
-            type="submit" disabled={loading}
+            type="submit" disabled={submitDisabled}
             style={{
               ...btnPrimary,
-              background: loading ? colors.surface2 : colors.primary,
-              color: loading ? colors.text3 : '#fff',
-              cursor: loading ? 'default' : 'pointer',
+              background: submitDisabled ? colors.surface2 : colors.primary,
+              color: submitDisabled ? colors.text3 : '#141414',
+              cursor: submitDisabled ? 'default' : 'pointer',
               marginTop: 4, transition: 'all .15s', letterSpacing: 0.2,
             }}
           >

@@ -94,7 +94,7 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
               width: 34, height: 34, borderRadius: '50%',
               background: colors.primary,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: fonts.body,
+              fontSize: 13, fontWeight: 700, color: '#141414', fontFamily: fonts.body,
             }}>
               {initials}
             </div>
@@ -135,7 +135,7 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
                   cursor: 'pointer', fontFamily: fonts.body, whiteSpace: 'nowrap',
                   border: `1px solid ${active ? colors.primary : colors.border}`,
                   background: active ? colors.primary : 'transparent',
-                  color: active ? '#fff' : colors.text3,
+                  color: active ? '#141414' : colors.text3,
                   transition: 'all .15s',
                   fontWeight: active ? 500 : 400,
                 }}
