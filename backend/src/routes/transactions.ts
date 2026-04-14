@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import { requireAuth, type AuthedRequest } from '../middleware/auth'
 import { createAuthedClient } from '../lib/supabase'
+import { validateBody, validateQuery, validateParams } from '../middleware/validate'
+import { TransactionListQuerySchema, TransactionCreateSchema, TransactionBatchSchema, TransactionUpdateSchema, IdParamSchema } from '../lib/schemas'
 
 const router = Router()
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, validateQuery(TransactionListQuerySchema), async (req, res) => {
   const { token } = req as AuthedRequest
   const { period, category, dedup } = req.query as Record<string, string>
 
@@ -33,7 +35,7 @@ router.get('/', requireAuth, async (req, res) => {
   res.json(data)
 })
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, validateBody(TransactionCreateSchema), async (req, res) => {
   const { token } = req as AuthedRequest
   const { error } = await createAuthedClient(token).from('transactions').insert(req.body)
   if (error) { res.status(500).json({ error: error.message }); return }
@@ -59,14 +61,14 @@ router.get('/history-categories', requireAuth, async (req, res) => {
   res.json(unique)
 })
 
-router.post('/batch', requireAuth, async (req, res) => {
+router.post('/batch', requireAuth, validateBody(TransactionBatchSchema), async (req, res) => {
   const { token } = req as AuthedRequest
   const { error } = await createAuthedClient(token).from('transactions').insert(req.body)
   if (error) { res.status(500).json({ error: error.message }); return }
   res.status(201).end()
 })
 
-router.patch('/:id', requireAuth, async (req, res) => {
+router.patch('/:id', requireAuth, validateParams(IdParamSchema), validateBody(TransactionUpdateSchema), async (req, res) => {
   const { token } = req as AuthedRequest
   const { error } = await createAuthedClient(token)
     .from('transactions')
@@ -76,7 +78,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
   res.status(204).end()
 })
 
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, validateParams(IdParamSchema), async (req, res) => {
   const { token } = req as AuthedRequest
   const { error } = await createAuthedClient(token)
     .from('transactions')

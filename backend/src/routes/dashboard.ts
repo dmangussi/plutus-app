@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import { requireAuth, type AuthedRequest } from '../middleware/auth'
 import { createAuthedClient } from '../lib/supabase'
+import { validateQuery } from '../middleware/validate'
+import { DashboardQuerySchema } from '../lib/schemas'
 
 const router = Router()
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, validateQuery(DashboardQuerySchema), async (req, res) => {
   const { token } = req as AuthedRequest
   const { period } = req.query as { period: string }
   const { data, error } = await createAuthedClient(token)

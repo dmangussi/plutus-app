@@ -1,0 +1,43 @@
+import { z } from 'zod'
+
+// ── Shared primitives ────────────────────────────────────────────────
+const period = z.string().regex(/^\d{4}-\d{2}$/, 'period must be YYYY-MM')
+const uuid   = z.string().uuid()
+
+// ── Auth ─────────────────────────────────────────────────────────────
+export const SignInSchema = z.object({
+  email:    z.string().email(),
+  password: z.string().min(1),
+})
+
+// ── Transactions ──────────────────────────────────────────────────────
+export const TransactionListQuerySchema = z.object({
+  period,
+  category: z.string().optional(),
+  dedup:    z.enum(['true', 'false']).optional(),
+})
+
+const TransactionBaseSchema = z.object({
+  user_id:            uuid,
+  description:        z.string().min(1),
+  raw_description:    z.string().nullable().optional(),
+  amount:             z.number().positive().max(999999.99),
+  date:               z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+  billing_period:     period,
+  category_id:        uuid.nullable().optional(),
+  installments:       z.number().int().min(1).optional(),
+  installment_number: z.number().int().min(1).optional(),
+})
+
+export const TransactionCreateSchema = TransactionBaseSchema
+export const TransactionBatchSchema  = z.array(TransactionBaseSchema).min(1)
+export const TransactionUpdateSchema = z.object({
+  description: z.string().min(1).optional(),
+  amount:      z.number().positive().max(999999.99).optional(),
+  category_id: uuid.nullable().optional(),
+}).strict()
+
+export const IdParamSchema = z.object({ id: uuid })
+
+// ── Dashboard ─────────────────────────────────────────────────────────
+export const DashboardQuerySchema = z.object({ period })

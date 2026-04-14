@@ -1,16 +1,18 @@
 import { Router } from 'express'
 import { createAnonClient, createAuthedClient, extractToken } from '../lib/supabase'
+import { validateBody } from '../middleware/validate'
+import { SignInSchema } from '../lib/schemas'
 
 const router = Router()
 
-router.post('/signin', async (req, res) => {
+router.post('/signin', validateBody(SignInSchema), async (req, res) => {
   const { email, password } = req.body
   const { data, error } = await createAnonClient().auth.signInWithPassword({ email, password })
   if (error) { res.status(401).json({ error: error.message }); return }
   res.json({ access_token: data.session.access_token, user: { id: data.user.id, email: data.user.email } })
 })
 
-router.post('/signup', async (req, res) => {
+router.post('/signup', validateBody(SignInSchema), async (req, res) => {
   const { email, password } = req.body
   const { data, error } = await createAnonClient().auth.signUp({ email, password })
   if (error) { res.status(400).json({ error: error.message }); return }
