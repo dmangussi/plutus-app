@@ -1,14 +1,21 @@
 # Plutus — Backend
 
-Express API that proxies all Supabase operations. Database credentials never reach the browser.
+Express API that proxies all Supabase operations. Database credentials never reach the browser. Deployed on Render.
 
 ## Dev
 
 ```bash
-cp .env.example .env   # fill in SUPABASE_URL and SUPABASE_ANON_KEY
+cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_ANON_KEY, FRONTEND_URL
 npm install
 npm run dev            # http://localhost:3001
 ```
+
+## Deploy (Render)
+
+- **Root Directory:** `backend`
+- **Build Command:** `npm install --include=dev && npm run build`
+- **Start Command:** `npm start`
+- **Env vars:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FRONTEND_URL`
 
 ## Routes
 

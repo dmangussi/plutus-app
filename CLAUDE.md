@@ -24,8 +24,14 @@ npm run typecheck  # TypeScript type-check without emitting files
 npm run lint       # ESLint (TypeScript + React Hooks rules)
 npm run test       # Vitest unit tests
 
+# Dev (both services at once, from repo root)
+npm install        # installs concurrently
+npm run dev        # backend :3001 + frontend :5173
+
 # Deploy
-vercel --prod      # from repo root
+# Frontend → Vercel (auto-deploy on push to main)
+# Backend  → Render  (auto-deploy on push to main)
+git push origin main
 ```
 
 ## Testing
@@ -70,7 +76,7 @@ All data access goes through the Express backend at `/api/*`. Frontend uses `lib
 4. Confirmed transactions are batch-inserted via `POST /api/transactions/batch`
 
 ### Backend (Express)
-Routes in `backend/src/routes/`: `auth`, `categories`, `transactions`, `dashboard`. All data routes require a Bearer token (`middleware/auth.ts`). The Supabase client is created per-request with the user's JWT (`lib/supabase.ts`), preserving RLS. The backend exports the Express app as default — Vercel runs it as serverless; locally it binds to port 3001.
+Routes in `backend/src/routes/`: `auth`, `categories`, `transactions`, `dashboard`. All data routes require a Bearer token (`middleware/auth.ts`). The Supabase client is created per-request with the user's JWT (`lib/supabase.ts`), preserving RLS. Deployed on Render as a Node.js web service; locally binds to port 3001.
 
 ### Database
 Schema in `db/migrations/001_initial_schema.sql`. Active tables: `categories`, `transactions`. RPC in `db/migrations/002_dashboard_rpcs.sql`: `dashboard_summary(p_period)`. Migrations are applied manually via Supabase SQL Editor. Types mirror the schema in `src/types/database.ts`.
@@ -127,7 +133,10 @@ FRONTEND_URL=http://localhost:5173
 PORT=3001
 
 # Vercel (production) — set in Vercel dashboard
+VITE_API_URL   # Render backend URL, e.g. https://plutus-backend.onrender.com
+
+# Render (production) — set in Render dashboard
 SUPABASE_URL
 SUPABASE_ANON_KEY
-FRONTEND_URL
+FRONTEND_URL   # Vercel frontend URL, e.g. https://plutus-app-alpha.vercel.app
 ```
