@@ -185,6 +185,10 @@ export default function Auth() {
           </button>
         </form>
       </div>
+
+      <div style={{ marginTop: 20, color: colors.text3, fontSize: 11, fontFamily: fonts.body, opacity: 0.5 }}>
+        v{__APP_VERSION__}
+      </div>
     </div>
   )
 }
