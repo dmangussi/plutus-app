@@ -12,12 +12,17 @@ import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
 import type { Category } from '../types/database'
 
 interface Candidate {
-  tempId:         string
-  description:    string
-  rawDescription: string
-  amount:         number
-  date:           string
-  categoryId:     string | null
+  tempId:          string
+  description:     string
+  rawDescription:  string
+  amount:          number
+  date:            string
+  categoryId:      string | null
+  suggestionMatch?: 'exact' | 'prefix'
+}
+
+function normalizePrefix(raw: string): string {
+  return raw.trim().toUpperCase().split(/\s+/).slice(0, 3).join(' ')
 }
 
 type Step = 'upload' | 'review'
@@ -60,23 +65,42 @@ export default function Import({ onDone }: { onDone: () => void }) {
     }
     show('Processando CSV...')
     try {
-      const [text, dedupData] = await Promise.all([
+      const [text, dedupData, historyData] = await Promise.all([
         file.text(),
         apiFetch(`/api/transactions?period=${billingPeriod}&dedup=true`) as Promise<{ raw_description: string | null; amount: number; date: string }[]>,
+        apiFetch('/api/transactions/history-categories') as Promise<{ raw_description: string; category_id: string }[]>,
       ])
       setExistingKeys(new Set(
         dedupData.filter(r => r.raw_description).map(r => `${r.raw_description}|${r.amount}|${r.date}`)
       ))
+
+      const exactMap = new Map<string, string>(
+        historyData.map(r => [r.raw_description.toUpperCase(), r.category_id])
+      )
+      const prefixMap = new Map<string, string>()
+      for (const r of historyData) {
+        const prefix = normalizePrefix(r.raw_description)
+        if (!prefixMap.has(prefix)) prefixMap.set(prefix, r.category_id)
+      }
+
       const raw = parseCSV(text)
       if (!raw.length) throw new Error('Nenhuma transação encontrada no arquivo.')
-      const items: Candidate[] = raw.map((r, i) => ({
-        tempId:         `${Date.now()}-${i}`,
-        description:    r.description,
-        rawDescription: r.description,
-        amount:         r.amount,
-        date:           r.date,
-        categoryId:     categories.find(c => c.name === 'Outros')?.id ?? null,
-      }))
+      const othersId = categories.find(c => c.name === 'Outros')?.id ?? null
+      const items: Candidate[] = raw.map((r, i) => {
+        const key     = r.description.toUpperCase()
+        const prefix  = normalizePrefix(r.description)
+        const exactId = exactMap.get(key)
+        const prefId  = prefixMap.get(prefix)
+        return {
+          tempId:          `${Date.now()}-${i}`,
+          description:     r.description,
+          rawDescription:  r.description,
+          amount:          r.amount,
+          date:            r.date,
+          categoryId:      exactId ?? prefId ?? othersId,
+          suggestionMatch: exactId ? 'exact' : prefId ? 'prefix' : undefined,
+        }
+      })
       setCandidates(items)
       setSelected(Object.fromEntries(items.map(it => [it.tempId, true])))
       hide()
@@ -206,7 +230,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gap: 5, maxHeight: '50vh', overflowY: 'auto', overflowX: 'hidden', marginBottom: 14, paddingRight: 2 }}>
+            <div style={{ display: 'grid', gap: 5, maxHeight: '50vh', overflowY: 'auto', overflowX: 'hidden', marginBottom: 14, paddingRight: 18 }}>
               {candidates.map(c => {
                 const category = categories.find(cat => cat.id === c.categoryId)
                 const dup      = isDuplicate(c)
@@ -290,19 +314,24 @@ function CandidateRow({ candidate: c, category, categories, selected, duplicate,
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-          <div style={{ fontSize: 12, color: selected ? colors.text : colors.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: fonts.body, fontWeight: 500 }}>
-            {c.description}
+          <div style={{ fontSize: 12, color: selected ? colors.text : colors.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: fonts.body, fontWeight: 500, flex: 1, minWidth: 0 }}>
+            {c.description.length > 30 ? c.description.slice(0, 30) + '…' : c.description}
           </div>
           <div style={{ fontSize: 12, color: selected ? colors.text : '#3a3a3a', flexShrink: 0, fontWeight: selected ? 600 : 400, fontFamily: fonts.body }}>
             {formatCurrency(c.amount)}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 10, color: '#3a3a3a', fontFamily: fonts.body }}>{c.date}</span>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 4, gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+            <span style={{ fontSize: 10, color: '#3a3a3a', fontFamily: fonts.body, flexShrink: 0 }}>{c.date}</span>
             {duplicate && (
               <span style={{ fontSize: 9, color: '#5a8a5a', background: '#0e1a0e', border: '1px solid #1e3a1e', borderRadius: 4, padding: '2px 6px', whiteSpace: 'nowrap', fontFamily: fonts.body }}>
                 já importada
+              </span>
+            )}
+            {!duplicate && c.suggestionMatch && (
+              <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.5, fontFamily: fonts.body, color: c.suggestionMatch === 'exact' ? colors.primary : colors.text3, textTransform: 'uppercase' }}>
+                {c.suggestionMatch === 'exact' ? '✓ histórico' : '~ sugerido'}
               </span>
             )}
           </div>

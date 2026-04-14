@@ -40,6 +40,25 @@ router.post('/', requireAuth, async (req, res) => {
   res.status(201).end()
 })
 
+router.get('/history-categories', requireAuth, async (req, res) => {
+  const { token } = req as AuthedRequest
+  const { data, error } = await createAuthedClient(token)
+    .from('transactions')
+    .select('raw_description, category_id')
+    .not('raw_description', 'is', null)
+    .not('category_id', 'is', null)
+    .order('created_at', { ascending: false })
+  if (error) { res.status(500).json({ error: error.message }); return }
+
+  const seen = new Set<string>()
+  const unique = (data ?? []).filter(r => {
+    if (seen.has(r.raw_description!)) return false
+    seen.add(r.raw_description!)
+    return true
+  })
+  res.json(unique)
+})
+
 router.post('/batch', requireAuth, async (req, res) => {
   const { token } = req as AuthedRequest
   const { error } = await createAuthedClient(token).from('transactions').insert(req.body)
