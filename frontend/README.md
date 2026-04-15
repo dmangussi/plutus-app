@@ -1,6 +1,6 @@
 # Plutus — Frontend
 
-React 18 + Vite + TypeScript. Deployed on Vercel.
+React 19 + Vite 8 + TypeScript. Deployed on Vercel.
 
 ## Dev
 

@@ -15,9 +15,9 @@ Family finance tracker — CSV import, spending dashboards, category management.
 
 - **Database**: PostgreSQL via Supabase (with Row-Level Security)
 - **Auth**: Supabase Auth (proxied through backend)
-- **Frontend**: React 18 + Vite + TypeScript
-- **Backend**: Node.js + Express (credentials never reach the browser)
-- **Deploy**: Vercel (frontend CDN + backend as serverless functions)
+- **Frontend**: React 19 + Vite 8 + TypeScript
+- **Backend**: Node.js + Express 5 (credentials never reach the browser)
+- **Deploy**: Vercel (frontend) + Google Cloud Run (backend)
 
 ## Getting started
 

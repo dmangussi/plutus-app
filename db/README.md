@@ -35,3 +35,4 @@ PostgreSQL hosted on Supabase. All schema changes live here as numbered SQL file
 | File | Description | Applied |
 |------|-------------|---------|
 | `001_initial_schema.sql` | All tables, RLS, indexes, default categories | 2026-03-11 |
+| `002_dashboard_rpcs.sql` | `dashboard_summary(p_period)` RPC function | 2026-03-11 |

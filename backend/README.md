@@ -1,6 +1,6 @@
 # Plutus — Backend
 
-Express API that proxies all Supabase operations. Database credentials never reach the browser. Deployed on Render.
+Express 5 API that proxies all Supabase operations. Database credentials never reach the browser. Deployed on Google Cloud Run.
 
 ## Dev
 
@@ -10,11 +10,11 @@ npm install
 npm run dev            # http://localhost:3001
 ```
 
-## Deploy (Render)
+## Deploy (Google Cloud Run)
 
-- **Root Directory:** `backend`
-- **Build Command:** `npm install --include=dev && npm run build`
-- **Start Command:** `npm start`
+Auto-deployed via Cloud Build trigger on push to `main`. The Dockerfile in `backend/` runs a multi-stage build.
+
+- **Region:** us-central1
 - **Env vars:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FRONTEND_URL`
 
 ## Routes
