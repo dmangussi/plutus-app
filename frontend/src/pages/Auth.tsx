@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useLoading } from '../hooks/useLoading'
 import { ErrorMessage } from '../components/ErrorMessage'
+import { CoinIcon } from '../components/CoinIcon'
 import { colors, fonts } from '../styles/theme'
 import { inputStyle, btnPrimary } from '../styles/common'
 
@@ -102,7 +103,7 @@ export default function Auth() {
 
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
-        <div style={{ fontSize: 36, marginBottom: 16, lineHeight: 1 }}>🪙</div>
+        <div style={{ marginBottom: 16, lineHeight: 1 }}><CoinIcon size={48} /></div>
         <h1 style={{
           fontFamily: fonts.heading, fontSize: 32, fontWeight: 600,
           color: colors.text, letterSpacing: -0.5, marginBottom: 8,
