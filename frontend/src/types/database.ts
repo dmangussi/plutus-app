@@ -1,12 +1,3 @@
-export interface Database {
-  public: {
-    Tables: {
-      categories:   { Row: Category;    Insert: Omit<Category, 'id'>;               Update: Partial<Omit<Category, 'id'>> }
-      transactions: { Row: Transaction; Insert: Omit<Transaction, 'id'|'created_at'>; Update: Partial<Omit<Transaction, 'id'>> }
-    }
-  }
-}
-
 export interface Category {
   id: string; user_id: string | null; name: string; emoji: string; color: string; is_default: boolean
 }

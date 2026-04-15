@@ -40,7 +40,6 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
   const [everLoaded, setEverLoaded] = useState(false)
 
   useEffect(() => {
-    const controller = new AbortController()
     setLoading(true)
     apiFetch(`/api/dashboard?period=${activePeriod}`)
       .then((data: SummaryRow[]) => {
@@ -49,7 +48,6 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
         setEverLoaded(true)
       })
       .catch(() => setLoading(false))
-    return () => controller.abort()
   }, [activePeriod])
 
   const total      = summary.reduce((sum, r) => sum + Number(r.total), 0)

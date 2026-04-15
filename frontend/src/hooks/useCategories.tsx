@@ -10,7 +10,6 @@ export function useCategories() {
 
   useEffect(() => {
     if (cache !== null) return
-    const controller = new AbortController()
     apiFetch('/api/categories')
       .then((data: Category[]) => {
         cache = data ?? []
@@ -18,7 +17,6 @@ export function useCategories() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-    return () => controller.abort()
   }, [])
 
   const getCategory = (id: string | null) =>
