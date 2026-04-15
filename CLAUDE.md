@@ -30,7 +30,7 @@ npm run dev        # backend :3001 + frontend :5173
 
 # Deploy
 # Frontend → Vercel (auto-deploy on push to main)
-# Backend  → Render  (auto-deploy on push to main)
+# Backend  → Google Cloud Run (auto-deploy via Cloud Build trigger on push to main)
 git push origin main
 ```
 
@@ -71,12 +71,13 @@ All data access goes through the Express backend at `/api/*`. Frontend uses `lib
 
 ### CSV Import
 1. `parseCSV()` in `utils/csv.ts` parses Itaú bank CSV format
-2. User reviews all parsed transactions and assigns categories manually
-3. Duplicate detection uses `raw_description|amount|date` scoped to the selected `billing_period`
-4. Confirmed transactions are batch-inserted via `POST /api/transactions/batch`
+2. Auto-categorization: `GET /api/transactions/history-categories` returns past raw descriptions with their assigned categories; Import builds an exact map and a 3-word prefix map to suggest categories for each candidate (badge: "✓ histórico" for exact match, "~ sugerido" for prefix match)
+3. User reviews candidates, can override categories, and deselect duplicates
+4. Duplicate detection uses `raw_description|amount|date` scoped to the selected `billing_period`
+5. Confirmed transactions are batch-inserted via `POST /api/transactions/batch`
 
 ### Backend (Express)
-Routes in `backend/src/routes/`: `auth`, `categories`, `transactions`, `dashboard`. All data routes require a Bearer token (`middleware/auth.ts`). The Supabase client is created per-request with the user's JWT (`lib/supabase.ts`), preserving RLS. Deployed on Render as a Node.js web service; locally binds to port 3001.
+Routes in `backend/src/routes/`: `auth`, `categories`, `transactions`, `dashboard`. All data routes require a Bearer token (`middleware/auth.ts`). The Supabase client is created per-request with the user's JWT (`lib/supabase.ts`), preserving RLS. Input validation on every route via Zod schemas in `lib/schemas.ts` and middleware factory in `middleware/validate.ts` — invalid requests return 400 before touching the database. Deployed on Google Cloud Run (us-central1) via Docker multi-stage build (`backend/Dockerfile`); Cloud Build trigger redeploys automatically on push to main. Locally binds to port 3001.
 
 ### Database
 Schema in `db/migrations/001_initial_schema.sql`. Active tables: `categories`, `transactions`. RPC in `db/migrations/002_dashboard_rpcs.sql`: `dashboard_summary(p_period)`. Migrations are applied manually via Supabase SQL Editor. Types mirror the schema in `src/types/database.ts`.
@@ -133,9 +134,9 @@ FRONTEND_URL=http://localhost:5173
 PORT=3001
 
 # Vercel (production) — set in Vercel dashboard
-VITE_API_URL   # Render backend URL, e.g. https://plutus-backend.onrender.com
+VITE_API_URL   # Cloud Run backend URL, e.g. https://plutus-backend-xxxxxxxx-uc.a.run.app
 
-# Render (production) — set in Render dashboard
+# Google Cloud Run (production) — set in Cloud Run service environment variables
 SUPABASE_URL
 SUPABASE_ANON_KEY
 FRONTEND_URL   # Vercel frontend URL, e.g. https://plutus-app-alpha.vercel.app
