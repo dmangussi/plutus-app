@@ -7,7 +7,7 @@ export async function login(page: Page) {
   await page.goto('/')
   await page.getByPlaceholder('E-mail').fill(EMAIL)
   await page.getByPlaceholder('Senha').fill(PASSWORD)
-  await page.getByRole('button', { name: 'Entrar' }).click()
+  await page.locator('button[type="submit"]').click()
   // Wait for dashboard to appear
   await page.waitForSelector('text=Olá', { timeout: 10000 })
 }

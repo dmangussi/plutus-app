@@ -10,7 +10,7 @@ test.describe('Auth', () => {
     await page.goto('/')
     await page.getByPlaceholder('E-mail').fill(EMAIL)
     await page.getByPlaceholder('Senha').fill(PASSWORD)
-    await page.getByRole('button', { name: 'Entrar' }).click()
+    await page.locator('button[type="submit"]').click()
     await expect(page.getByText('Olá')).toBeVisible({ timeout: 10000 })
   })
 
@@ -18,7 +18,7 @@ test.describe('Auth', () => {
     await page.goto('/')
     await page.getByPlaceholder('E-mail').fill(EMAIL)
     await page.getByPlaceholder('Senha').fill('wrong-password')
-    await page.getByRole('button', { name: 'Entrar' }).click()
+    await page.locator('button[type="submit"]').click()
     await expect(page.getByText(/invalid|inválid/i)).toBeVisible({ timeout: 5000 })
   })
 
@@ -26,7 +26,7 @@ test.describe('Auth', () => {
     await page.goto('/')
     await page.getByPlaceholder('E-mail').fill(EMAIL)
     await page.getByPlaceholder('Senha').fill(PASSWORD)
-    await page.getByRole('button', { name: 'Entrar' }).click()
+    await page.locator('button[type="submit"]').click()
     await page.waitForSelector('text=Olá', { timeout: 10000 })
     await page.getByTitle('Sair').click()
     await expect(page.getByText('Finanças da família')).toBeVisible({ timeout: 5000 })

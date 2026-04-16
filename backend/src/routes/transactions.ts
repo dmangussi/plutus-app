@@ -8,7 +8,9 @@ const router = Router()
 
 router.get('/', requireAuth, validateQuery(TransactionListQuerySchema), async (req, res) => {
   const { token } = req as AuthedRequest
-  const { period, category, dedup } = req.query as Record<string, string>
+  const period   = req.query.period as string
+  const category = req.query.category as string | undefined
+  const dedup    = req.query.dedup as string | undefined
 
   const db = createAuthedClient(token)
 

@@ -1,9 +1,14 @@
 import { defineConfig } from '@playwright/test'
+import * as dotenv from 'dotenv'
+import { join } from 'path'
+
+dotenv.config({ path: join(__dirname, '.env.test') })
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: false, // avoid race conditions on shared test DB
-  retries: 1,
+  fullyParallel: false, // tests share a single Supabase test user — run sequentially to avoid DB races
+  workers: 1,
+  retries: 0,
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
@@ -20,9 +25,12 @@ export default defineConfig({
       },
     },
     {
-      command: 'cd ../frontend && VITE_API_URL=http://localhost:3001 npm run dev',
+      command: 'cd ../frontend && npm run dev',
       port: 5173,
       reuseExistingServer: true,
+      env: {
+        VITE_API_URL: 'http://localhost:3001',
+      },
     },
   ],
 })
