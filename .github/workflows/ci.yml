@@ -17,7 +17,7 @@ jobs:
           node-version: 22
 
       - name: Frontend — install
-        run: npm ci
+        run: npm install
         working-directory: frontend
 
       - name: Frontend — typecheck
@@ -55,7 +55,7 @@ jobs:
         working-directory: backend
 
       - name: Frontend — install
-        run: npm ci
+        run: npm install
         working-directory: frontend
 
       - name: E2E — install
