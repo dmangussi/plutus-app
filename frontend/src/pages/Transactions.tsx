@@ -1,46 +1,33 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '../lib/api'
 import { useCategories } from '../hooks/useCategories'
-import { useAuth } from '../hooks/useAuth'
-import { useLoading } from '../hooks/useLoading'
 import { PageHeader } from '../components/PageHeader'
 import { LoadingPlaceholder } from '../components/LoadingPlaceholder'
 import { EmptyState } from '../components/EmptyState'
-import { Modal } from '../components/Modal'
+import { AddTransactionModal } from '../components/AddTransactionModal'
+import { EditTransactionModal } from '../components/EditTransactionModal'
+import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
 import { formatCurrency, periodLabel, periodKey } from '../utils/format'
 import { colors, fonts } from '../styles/theme'
-import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
+import { inputStyle } from '../styles/common'
 import type { Transaction } from '../types/database'
 
-export default function Transactions({ initialCategoryFilter, initialPeriodFilter, onPeriodChange }: { initialCategoryFilter?: string | null; initialPeriodFilter?: string | null; onPeriodChange?: (p: string) => void }) {
+export default function Transactions({ initialCategoryFilter, initialPeriodFilter, onPeriodChange }: {
+  initialCategoryFilter?: string | null
+  initialPeriodFilter?:   string | null
+  onPeriodChange?:        (p: string) => void
+}) {
   const { categories, getCategory } = useCategories()
-  const { user }       = useAuth()
-  const { show, hide } = useLoading()
 
   const currentPeriod = periodKey(new Date().getFullYear(), new Date().getMonth() + 1)
   const [periodFilter,   setPeriodFilter]   = useState(initialPeriodFilter ?? currentPeriod)
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter ?? 'all')
-
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [everLoaded, setEverLoaded]     = useState(false)
-  const [error,        setError]        = useState('')
-  const [deleteId,     setDeleteId]     = useState<string | null>(null)
-  const [deleting,     setDeleting]     = useState(false)
-  const [editTx,       setEditTx]       = useState<Transaction | null>(null)
-  const [editDesc,     setEditDesc]     = useState('')
-  const [editAmount,   setEditAmount]   = useState('')
-  const [editCategory, setEditCategory] = useState('')
-  const [saving,       setSaving]       = useState(false)
-
-  const today = new Date().toISOString().slice(0, 10)
-  const [addOpen,      setAddOpen]      = useState(false)
-  const [newDesc,      setNewDesc]      = useState('')
-  const [newAmount,    setNewAmount]    = useState('')
-  const [newDate,      setNewDate]      = useState(today)
-  const [newPeriod,    setNewPeriod]    = useState('')
-  const [newCategory,  setNewCategory]  = useState('')
-  const [adding,       setAdding]       = useState(false)
+  const [transactions,   setTransactions]   = useState<Transaction[]>([])
+  const [loading,        setLoading]        = useState(true)
+  const [everLoaded,     setEverLoaded]     = useState(false)
+  const [deleteId,       setDeleteId]       = useState<string | null>(null)
+  const [editTx,         setEditTx]         = useState<Transaction | null>(null)
+  const [addOpen,        setAddOpen]        = useState(false)
 
   const periods = (() => {
     const result: string[] = []
@@ -76,99 +63,16 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 
   const total = transactions.reduce((sum, t) => sum + t.amount, 0)
 
-  function openEdit(t: Transaction) {
-    setEditTx(t)
-    setEditDesc(t.description)
-    setEditAmount(String(t.amount))
-    setEditCategory(t.category_id ?? '')
-  }
-
-  async function handleSave() {
-    if (!editTx) return
-    const amount = parseFloat(editAmount)
-    if (isNaN(amount) || amount <= 0 || amount > 999999.99) { setError('Valor inválido.'); return }
-    setSaving(true)
-    show('Salvando alterações...')
-    try {
-      await apiFetch(`/api/transactions/${editTx.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ description: editDesc, amount, category_id: editCategory || null }),
-      })
-      setEditTx(null)
-      fetchTransactions()
-    } catch (e) {
-      setError((e as Error).message || 'Erro ao salvar.')
-    } finally {
-      hide()
-      setSaving(false)
-    }
-  }
-
-  async function handleDelete(id: string) {
-    setDeleting(true)
-    show('Excluindo transação...')
-    try {
-      await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' })
-      setDeleteId(null)
-      fetchTransactions()
-    } catch (e) {
-      setError((e as Error).message || 'Erro ao excluir.')
-    } finally {
-      hide()
-      setDeleting(false)
-    }
-  }
-
-  function openAdd() {
-    setNewDesc('')
-    setNewAmount('')
-    setNewDate(today)
-    setNewPeriod(periodFilter)
-    setNewCategory('')
-    setError('')
-    setAddOpen(true)
-  }
-
-  async function handleAdd() {
-    const amount = parseFloat(newAmount)
-    if (isNaN(amount) || amount <= 0 || amount > 999999.99) { setError('Valor inválido.'); return }
-    setAdding(true)
-    show('Salvando transação...')
-    try {
-      await apiFetch('/api/transactions', {
-        method: 'POST',
-        body: JSON.stringify({
-          user_id:            user!.id,
-          description:        newDesc,
-          amount,
-          date:               newDate,
-          billing_period:     newPeriod,
-          category_id:        newCategory || null,
-          installments:       1,
-          installment_number: 1,
-        }),
-      })
-      setAddOpen(false)
-      fetchTransactions()
-    } catch (e) {
-      setError((e as Error).message || 'Erro ao adicionar.')
-    } finally {
-      hide()
-      setAdding(false)
-    }
-  }
-
   if (!everLoaded) return <LoadingPlaceholder />
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', overflowX: 'hidden', opacity: loading ? 0.4 : 1, transition: 'opacity 0.25s' }}>
-
       <PageHeader
         title="Gastos"
         subtitle={`${transactions.length} transações · ${formatCurrency(total)}`}
         action={
           <button
-            onClick={openAdd}
+            onClick={() => setAddOpen(true)}
             style={{
               marginTop: 6,
               width: 36, height: 36, borderRadius: '50%',
@@ -181,9 +85,12 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
         }
       />
 
-      {/* ── Filters ─────────────────────────────────────────────── */}
       <div style={{ padding: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
-        <select value={periodFilter} onChange={e => { setPeriodFilter(e.target.value); onPeriodChange?.(e.target.value) }} style={inputStyle}>
+        <select
+          value={periodFilter}
+          onChange={e => { setPeriodFilter(e.target.value); onPeriodChange?.(e.target.value) }}
+          style={inputStyle}
+        >
           {periods.map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
         </select>
         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={inputStyle}>
@@ -192,7 +99,6 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
         </select>
       </div>
 
-      {/* ── List ────────────────────────────────────────────────── */}
       <div style={{ padding: '4px 16px' }}>
         {transactions.length === 0 ? (
           <EmptyState emoji="📭" text="Nenhuma transação encontrada." />
@@ -203,7 +109,7 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
                 key={t.id}
                 transaction={t}
                 getCategory={getCategory}
-                onEdit={openEdit}
+                onEdit={setEditTx}
                 onDelete={setDeleteId}
               />
             ))}
@@ -211,137 +117,27 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
         )}
       </div>
 
-      {/* ── Add modal ──────────────────────────────────────────── */}
       {addOpen && (
-        <Modal>
-          <div style={{ color: colors.text, fontSize: 16, fontWeight: 600, fontFamily: fonts.heading, marginBottom: 20 }}>
-            Novo gasto
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Descrição</label>
-              <input value={newDesc} onChange={e => setNewDesc(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Valor</label>
-              <input type="number" step="0.01" min="0.01" max="999999.99" value={newAmount} onChange={e => setNewAmount(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Data</label>
-              <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Período de fatura</label>
-              <select value={newPeriod} onChange={e => setNewPeriod(e.target.value)} style={inputStyle}>
-                {periods.map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Categoria</label>
-              <select value={newCategory} onChange={e => setNewCategory(e.target.value)} style={inputStyle}>
-                <option value="">Sem categoria</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-              </select>
-            </div>
-            {error && <div style={{ fontSize: 12, color: colors.dangerText }}>{error}</div>}
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-            <button onClick={() => setAddOpen(false)} style={{ ...btnGhost, flex: 1, color: colors.text2 }}>
-              Cancelar
-            </button>
-            <button
-              onClick={handleAdd}
-              disabled={adding || !newDesc.trim() || !newAmount || !newDate}
-              style={{ ...btnPrimary, flex: 1, opacity: (!newDesc.trim() || !newAmount || !newDate) ? 0.4 : 1 }}
-            >
-              {adding ? 'Salvando...' : 'Adicionar'}
-            </button>
-          </div>
-        </Modal>
+        <AddTransactionModal
+          periods={periods}
+          defaultPeriod={periodFilter}
+          onSave={() => { fetchTransactions() }}
+          onClose={() => setAddOpen(false)}
+        />
       )}
-
-      {/* ── Edit modal ─────────────────────────────────────────── */}
       {editTx && (
-        <Modal>
-          <div style={{ color: colors.text, fontSize: 16, fontWeight: 600, fontFamily: fonts.heading, marginBottom: 20 }}>
-            Editar transação
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {editTx.raw_description && (
-              <div>
-                <label style={labelStyle}>Descrição original</label>
-                <input readOnly value={editTx.raw_description} style={{ ...inputStyle, opacity: 0.5, cursor: 'default' }} />
-              </div>
-            )}
-            <div>
-              <label style={labelStyle}>Descrição</label>
-              <input value={editDesc} onChange={e => setEditDesc(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Valor</label>
-              <input type="number" step="0.01" min="0.01" max="999999.99" value={editAmount} onChange={e => setEditAmount(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Categoria</label>
-              <select value={editCategory} onChange={e => setEditCategory(e.target.value)} style={inputStyle}>
-                <option value="">Sem categoria</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-              </select>
-            </div>
-            {error && <div style={{ fontSize: 12, color: colors.dangerText }}>{error}</div>}
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-            <button onClick={() => setEditTx(null)} style={{ ...btnGhost, flex: 1, color: colors.text2 }}>
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !editDesc.trim() || !editAmount}
-              style={{ ...btnPrimary, flex: 1, opacity: (!editDesc.trim() || !editAmount) ? 0.4 : 1 }}
-            >
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
-        </Modal>
+        <EditTransactionModal
+          transaction={editTx}
+          onSave={() => { fetchTransactions() }}
+          onClose={() => setEditTx(null)}
+        />
       )}
-
-      {/* ── Delete modal ────────────────────────────────────────── */}
       {deleteId && (
-        <Modal>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: colors.surface2,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18, margin: '0 auto 14px',
-            }}>🗑</div>
-            <div style={{ color: colors.text, fontSize: 16, marginBottom: 6, fontWeight: 600, fontFamily: fonts.heading }}>
-              Excluir transação?
-            </div>
-            <div style={{ fontSize: 13, color: colors.text3, marginBottom: 24 }}>
-              Esta ação não pode ser desfeita.
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setDeleteId(null)} style={{ ...btnGhost, flex: 1, color: colors.text2 }}>
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)} disabled={deleting}
-                style={{
-                  flex: 1, padding: 13, background: colors.dangerBg,
-                  border: `1px solid ${colors.dangerBorder}`, color: colors.dangerText,
-                  cursor: 'pointer', borderRadius: 10, fontFamily: fonts.body, fontWeight: 600, fontSize: 13,
-                }}
-              >
-                {deleting ? 'Excluindo...' : 'Excluir'}
-              </button>
-            </div>
-          </div>
-        </Modal>
+        <DeleteConfirmModal
+          id={deleteId}
+          onDeleted={() => { setDeleteId(null); fetchTransactions() }}
+          onClose={() => setDeleteId(null)}
+        />
       )}
     </div>
   )
@@ -350,8 +146,8 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
 function TransactionRow({ transaction: t, getCategory, onEdit, onDelete }: {
   transaction: Transaction
   getCategory: (id: string | null) => ReturnType<ReturnType<typeof useCategories>['getCategory']>
-  onEdit: (t: Transaction) => void
-  onDelete: (id: string) => void
+  onEdit:      (t: Transaction) => void
+  onDelete:    (id: string) => void
 }) {
   const category = getCategory(t.category_id)
 
