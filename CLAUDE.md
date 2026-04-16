@@ -48,8 +48,11 @@ git push origin main
 - Hooks (`useAuth`, `useCategories`, etc.) — depend on API fetch context
 
 **E2E tests — Runner:** Playwright (`npm test` from `e2e/`).
-- Requires backend + frontend running (auto-started via `webServer` config)
-- Uses a dedicated Supabase test project (credentials in `e2e/.env.test`)
+- Backend + frontend are auto-started by `webServer` in `playwright.config.ts` — do not run `npm run dev` manually before the tests
+- Uses a dedicated Supabase test project — never the production project
+- Credentials in `e2e/.env.test` (copy from `e2e/.env.test.example` and fill in)
+- Tests run with `workers: 1` — all tests share one Supabase user, sequential execution avoids DB races
+- CI runs E2E via GitHub Actions (`.github/workflows/ci.yml`) using repository secrets
 
 **Rules:**
 - Before committing, all three must pass: `npm run test`, `npm run lint`, `npm run typecheck`

@@ -25,9 +25,12 @@ const TransactionBaseSchema = z.object({
   date:               z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
   billing_period:     period,
   category_id:        uuid.nullable().optional(),
-  installments:       z.number().int().min(1).optional(),
+  installments:       z.number().int().min(1).max(360).optional(),
   installment_number: z.number().int().min(1).optional(),
-})
+}).refine(
+  tx => !tx.installments || !tx.installment_number || tx.installment_number <= tx.installments,
+  { message: 'installment_number must be ≤ installments', path: ['installment_number'] }
+)
 
 export const TransactionCreateSchema = TransactionBaseSchema
 export const TransactionBatchSchema  = z.array(TransactionBaseSchema).min(1)

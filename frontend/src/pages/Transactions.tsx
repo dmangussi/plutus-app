@@ -53,20 +53,25 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   })()
 
   const fetchTransactions = useCallback(() => {
+    const abort = new AbortController()
     let url = `/api/transactions?period=${periodFilter}`
     if (categoryFilter !== 'all') url += `&category=${categoryFilter}`
-    apiFetch(url)
+    apiFetch(url, { signal: abort.signal })
       .then((data: Transaction[]) => {
         setTransactions(data ?? [])
         setLoading(false)
         setEverLoaded(true)
       })
-      .catch(() => setLoading(false))
+      .catch((e: Error) => {
+        if (e.name !== 'AbortError') setLoading(false)
+      })
+    return abort
   }, [periodFilter, categoryFilter])
 
   useEffect(() => {
     setLoading(true)
-    fetchTransactions()
+    const abort = fetchTransactions()
+    return () => abort.abort()
   }, [fetchTransactions])
 
   const total = transactions.reduce((sum, t) => sum + t.amount, 0)
@@ -84,24 +89,34 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     if (isNaN(amount) || amount <= 0 || amount > 999999.99) { setError('Valor inválido.'); return }
     setSaving(true)
     show('Salvando alterações...')
-    await apiFetch(`/api/transactions/${editTx.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ description: editDesc, amount, category_id: editCategory || null }),
-    })
-    hide()
-    setSaving(false)
-    setEditTx(null)
-    fetchTransactions()
+    try {
+      await apiFetch(`/api/transactions/${editTx.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ description: editDesc, amount, category_id: editCategory || null }),
+      })
+      setEditTx(null)
+      fetchTransactions()
+    } catch (e) {
+      setError((e as Error).message || 'Erro ao salvar.')
+    } finally {
+      hide()
+      setSaving(false)
+    }
   }
 
   async function handleDelete(id: string) {
     setDeleting(true)
     show('Excluindo transação...')
-    await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' })
-    hide()
-    setDeleteId(null)
-    setDeleting(false)
-    fetchTransactions()
+    try {
+      await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' })
+      setDeleteId(null)
+      fetchTransactions()
+    } catch (e) {
+      setError((e as Error).message || 'Erro ao excluir.')
+    } finally {
+      hide()
+      setDeleting(false)
+    }
   }
 
   function openAdd() {
@@ -119,23 +134,28 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     if (isNaN(amount) || amount <= 0 || amount > 999999.99) { setError('Valor inválido.'); return }
     setAdding(true)
     show('Salvando transação...')
-    await apiFetch('/api/transactions', {
-      method: 'POST',
-      body: JSON.stringify({
-        user_id:            user!.id,
-        description:        newDesc,
-        amount,
-        date:               newDate,
-        billing_period:     newPeriod,
-        category_id:        newCategory || null,
-        installments:       1,
-        installment_number: 1,
-      }),
-    })
-    hide()
-    setAdding(false)
-    setAddOpen(false)
-    fetchTransactions()
+    try {
+      await apiFetch('/api/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id:            user!.id,
+          description:        newDesc,
+          amount,
+          date:               newDate,
+          billing_period:     newPeriod,
+          category_id:        newCategory || null,
+          installments:       1,
+          installment_number: 1,
+        }),
+      })
+      setAddOpen(false)
+      fetchTransactions()
+    } catch (e) {
+      setError((e as Error).message || 'Erro ao adicionar.')
+    } finally {
+      hide()
+      setAdding(false)
+    }
   }
 
   if (!everLoaded) return <LoadingPlaceholder />

@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test'
-import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { login } from '../helpers/auth'
 import { clearTransactions, seedTransaction } from '../helpers/db'
-dotenv.config({ path: '.env.test' })
 
 const USER_ID    = process.env.TEST_USER_ID!
 const SAMPLE_CSV = path.join(__dirname, '../fixtures/sample.csv')
@@ -12,25 +10,27 @@ function skipIfNoUserId() {
   if (!USER_ID) test.skip()
 }
 
+// Import page defaults billing period to current month
+function currentMonthPeriod(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
 test.describe('Import', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
     await page.getByText('Importar').click()
-    await expect(page.getByText(/importar|upload|csv/i).first()).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/importar csv/i)).toBeVisible({ timeout: 5000 })
   })
 
   test('valid CSV upload proceeds to review step', async ({ page }) => {
-    const fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(SAMPLE_CSV)
-    // After upload, should reach review step showing transaction rows
+    await page.locator('input[type="file"]').setInputFiles(SAMPLE_CSV)
     await expect(page.getByText(/SUPERMERCADO TESTE|FARMACIA TESTE|RESTAURANTE TESTE/i).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('file larger than 5MB shows error', async ({ page }) => {
-    // Generate a large file in memory via browser
     await page.evaluate(() => {
-      // Create a blob larger than 5MB and dispatch a change event on the file input
-      const bytes = new Uint8Array(6 * 1024 * 1024).fill(65) // 6MB of 'A'
+      const bytes = new Uint8Array(6 * 1024 * 1024).fill(65)
       const file  = new File([bytes], 'big.csv', { type: 'text/csv' })
       const input = document.querySelector('input[type="file"]') as HTMLInputElement
       const dt    = new DataTransfer()
@@ -42,9 +42,7 @@ test.describe('Import', () => {
   })
 
   test('review step shows all parsed transactions', async ({ page }) => {
-    const fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(SAMPLE_CSV)
-    // All 3 rows from sample.csv should appear
+    await page.locator('input[type="file"]').setInputFiles(SAMPLE_CSV)
     await expect(page.getByText('SUPERMERCADO TESTE BR')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('FARMACIA TESTE BR')).toBeVisible({ timeout: 5000 })
     await expect(page.getByText('RESTAURANTE TESTE BR')).toBeVisible({ timeout: 5000 })
@@ -53,36 +51,25 @@ test.describe('Import', () => {
   test('already imported transaction in same period is marked as duplicate', async ({ page }) => {
     skipIfNoUserId()
     await clearTransactions(USER_ID)
-    const now = new Date()
-    const billingPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-    // Seed a transaction matching the first row of sample.csv
+    // Import page defaults to current month — seed a matching transaction in the same period
     await seedTransaction(USER_ID, {
-      billing_period:  billingPeriod,
+      billing_period:  currentMonthPeriod(),
       raw_description: 'SUPERMERCADO TESTE BR',
       amount:          150.00,
       date:            '2026-04-01',
     })
 
-    // Select matching billing period before uploading
-    const periodSelect = page.locator('select').filter({ hasText: /\d{4}/ }).or(
-      page.getByRole('combobox')
-    ).first()
-    if (await periodSelect.isVisible().catch(() => false)) {
-      await periodSelect.selectOption({ value: billingPeriod })
-    }
-
-    const fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(SAMPLE_CSV)
+    await page.locator('input[type="file"]').setInputFiles(SAMPLE_CSV)
     await page.waitForSelector('text=SUPERMERCADO TESTE BR', { timeout: 10000 })
 
-    // The seeded transaction should be flagged as already imported
-    await expect(page.getByText(/já importad|duplicad/i)).toBeVisible({ timeout: 5000 })
+    // Badge on the duplicate row
+    await expect(page.getByText('já importada', { exact: true })).toBeVisible({ timeout: 5000 })
   })
 
   test('same transaction in different period is NOT marked as duplicate', async ({ page }) => {
     skipIfNoUserId()
     await clearTransactions(USER_ID)
-    // Seed the transaction under a different billing period
+    // Seed under a past period — import page checks against current month, so no duplicate
     await seedTransaction(USER_ID, {
       billing_period:  '2025-01',
       raw_description: 'SUPERMERCADO TESTE BR',
@@ -90,30 +77,23 @@ test.describe('Import', () => {
       date:            '2026-04-01',
     })
 
-    const fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(SAMPLE_CSV)
+    await page.locator('input[type="file"]').setInputFiles(SAMPLE_CSV)
     await page.waitForSelector('text=SUPERMERCADO TESTE BR', { timeout: 10000 })
 
-    // Should not show "already imported" for a different billing_period
-    const dupLabel = page.getByText(/já importad|duplicad/i)
-    await expect(dupLabel).not.toBeVisible({ timeout: 3000 }).catch(() => {
-      // If it IS visible, it might refer to a different row — test passes if not the Supermercado row
-    })
+    await expect(page.getByText('já importada', { exact: true })).not.toBeVisible({ timeout: 3000 })
   })
 
-  test('confirm selection imports transactions to Gastos', async ({ page }) => {
+  test('confirm selection imports transactions', async ({ page }) => {
     skipIfNoUserId()
     await clearTransactions(USER_ID)
 
-    const fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(SAMPLE_CSV)
+    await page.locator('input[type="file"]').setInputFiles(SAMPLE_CSV)
     await page.waitForSelector('text=SUPERMERCADO TESTE BR', { timeout: 10000 })
 
-    // Click confirm/import button
-    const confirmBtn = page.getByRole('button', { name: /confirmar|importar|salvar/i })
-    await confirmBtn.click()
+    // Button text is dynamic: "Confirmar N · R$ X"
+    await page.getByRole('button', { name: /confirmar/i }).click()
 
-    // Should navigate back to dashboard or show success
-    await expect(page.getByText(/Olá|importad|sucesso/i).first()).toBeVisible({ timeout: 10000 })
+    // Import calls onDone() which navigates back to dashboard
+    await expect(page.getByText('Olá')).toBeVisible({ timeout: 10000 })
   })
 })

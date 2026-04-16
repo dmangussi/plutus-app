@@ -6,7 +6,7 @@ import { useLoading } from '../hooks/useLoading'
 import { PageHeader } from '../components/PageHeader'
 import { ErrorMessage } from '../components/ErrorMessage'
 import { parseCSV } from '../utils/csv'
-import { formatCurrency, periodKey } from '../utils/format'
+import { formatCurrency, periodKey, periodLabel } from '../utils/format'
 import { colors, fonts } from '../styles/theme'
 import { inputStyle, btnPrimary, btnGhost, labelStyle } from '../styles/common'
 import type { Category } from '../types/database'
@@ -86,13 +86,13 @@ export default function Import({ onDone }: { onDone: () => void }) {
       const raw = parseCSV(text)
       if (!raw.length) throw new Error('Nenhuma transação encontrada no arquivo.')
       const othersId = categories.find(c => c.name === 'Outros')?.id ?? null
-      const items: Candidate[] = raw.map((r, i) => {
+      const items: Candidate[] = raw.map(r => {
         const key     = r.description.toUpperCase()
         const prefix  = normalizePrefix(r.description)
         const exactId = exactMap.get(key)
         const prefId  = prefixMap.get(prefix)
         return {
-          tempId:          `${Date.now()}-${i}`,
+          tempId:          crypto.randomUUID(),
           description:     r.description,
           rawDescription:  r.description,
           amount:          r.amount,
@@ -176,12 +176,9 @@ export default function Import({ onDone }: { onDone: () => void }) {
                 Período de fatura
               </label>
               <select value={billingPeriod} onChange={e => setBillingPeriod(e.target.value)} style={inputStyle}>
-                {periodOptions.map(p => {
-                  const [year, month] = p.split('-')
-                  const label = new Date(parseInt(year), parseInt(month) - 1)
-                    .toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
-                  return <option key={p} value={p}>{label}</option>
-                })}
+                {periodOptions.map(p => (
+                  <option key={p} value={p}>{periodLabel(p)}</option>
+                ))}
               </select>
             </div>
 
