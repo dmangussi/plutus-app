@@ -86,7 +86,7 @@ export default function Import({ onDone }: { onDone: () => void }) {
       const raw = parseCSV(text)
       if (!raw.length) throw new Error('Nenhuma transação encontrada no arquivo.')
       const othersId = categories.find(c => c.name === 'Outros')?.id ?? null
-      const items: Candidate[] = raw.map((r, i) => {
+      const items: Candidate[] = raw.map(r => {
         const key     = r.description.toUpperCase()
         const prefix  = normalizePrefix(r.description)
         const exactId = exactMap.get(key)
