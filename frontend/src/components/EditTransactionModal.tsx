@@ -17,6 +17,7 @@ export function EditTransactionModal({ transaction, onSave, onClose }: {
 
   const [desc,     setDesc]     = useState(transaction.description)
   const [amount,   setAmount]   = useState(String(transaction.amount))
+  const [date,     setDate]     = useState(transaction.date)
   const [category, setCategory] = useState(transaction.category_id ?? '')
   const [saving,   setSaving]   = useState(false)
   const [error,    setError]    = useState('')
@@ -29,7 +30,7 @@ export function EditTransactionModal({ transaction, onSave, onClose }: {
     try {
       await apiFetch(`/api/transactions/${transaction.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ description: desc, amount: amt, category_id: category || null }),
+        body: JSON.stringify({ description: desc, amount: amt, date, category_id: category || null }),
       })
       onSave()
       onClose()
@@ -60,6 +61,10 @@ export function EditTransactionModal({ transaction, onSave, onClose }: {
         <div>
           <label style={labelStyle}>Valor</label>
           <input type="number" step="0.01" min="0.01" max="999999.99" value={amount} onChange={e => setAmount(e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Data</label>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
         </div>
         <div>
           <label style={labelStyle}>Categoria</label>
