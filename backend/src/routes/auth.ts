@@ -38,8 +38,7 @@ router.post('/change-password', validateBody(ChangePasswordSchema), async (req, 
   const token = extractToken(req.headers.authorization)
   if (!token) { res.status(401).json({ error: 'Unauthorized' }); return }
 
-  const authedClient = createAuthedClient(token)
-  const { data: userData, error: userError } = await authedClient.auth.getUser()
+  const { data: userData, error: userError } = await createAuthedClient(token).auth.getUser()
   if (userError || !userData.user?.email) { res.status(401).json({ error: 'Invalid token' }); return }
 
   const { error: signInError } = await createAnonClient().auth.signInWithPassword({
@@ -48,8 +47,16 @@ router.post('/change-password', validateBody(ChangePasswordSchema), async (req, 
   })
   if (signInError) { res.status(401).json({ error: 'Senha atual incorreta' }); return }
 
-  const { error: updateError } = await authedClient.auth.updateUser({ password: req.body.newPassword })
-  if (updateError) { res.status(400).json({ error: updateError.message }); return }
+  // auth.updateUser() requires a full session — call the REST API directly with the JWT instead
+  const updateRes = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+    method:  'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, apikey: process.env.SUPABASE_ANON_KEY! },
+    body:    JSON.stringify({ password: req.body.newPassword }),
+  })
+  if (!updateRes.ok) {
+    const body = await updateRes.json().catch(() => ({})) as { msg?: string; message?: string }
+    res.status(400).json({ error: body.msg ?? body.message ?? 'Erro ao atualizar senha' }); return
+  }
 
   res.json({ ok: true })
 })
