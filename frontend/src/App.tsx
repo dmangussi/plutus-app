@@ -5,10 +5,11 @@ import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Import from './pages/Import'
+import Profile from './pages/Profile'
 import { LoadingPlaceholder } from './components/LoadingPlaceholder'
 import { colors, fonts } from './styles/theme'
 
-type View = 'dashboard' | 'transactions' | 'import'
+type View = 'dashboard' | 'transactions' | 'import' | 'profile'
 
 const NAV: { view: View; icon: string; label: string }[] = [
   { view: 'dashboard',    icon: '⊞',  label: 'Início' },
@@ -39,9 +40,10 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: colors.bg, color: colors.text }}>
 
       <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
-        {view === 'dashboard'    && <Dashboard onSignOut={signOut} activePeriod={activePeriod} onPeriodChange={setActivePeriod} onCategoryClick={(categoryId, period) => { setCategoryFilter(categoryId); setActivePeriod(period); setView('transactions') }} />}
+        {view === 'dashboard'    && <Dashboard onProfile={() => setView('profile')} activePeriod={activePeriod} onPeriodChange={setActivePeriod} onCategoryClick={(categoryId, period) => { setCategoryFilter(categoryId); setActivePeriod(period); setView('transactions') }} />}
         {view === 'transactions' && <Transactions initialCategoryFilter={categoryFilter} initialPeriodFilter={activePeriod} onPeriodChange={setActivePeriod} />}
         {view === 'import'       && <Import onDone={() => setView('dashboard')} />}
+        {view === 'profile'      && <Profile onBack={() => setView('dashboard')} onSignOut={signOut} />}
       </div>
 
       {/* ── Bottom navigation ──────────────────────────────────── */}

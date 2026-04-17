@@ -26,8 +26,8 @@ function lastMonths(n: number): string[] {
   return result
 }
 
-export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onCategoryClick }: {
-  onSignOut: () => void
+export default function Dashboard({ onProfile, activePeriod, onPeriodChange, onCategoryClick }: {
+  onProfile: () => void
   activePeriod: string
   onPeriodChange: (period: string) => void
   onCategoryClick: (categoryId: string, period: string) => void
@@ -75,28 +75,19 @@ export default function Dashboard({ onSignOut, activePeriod, onPeriodChange, onC
               {firstName}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              onClick={onSignOut}
-              title="Sair"
-              style={{
-                width: 34, height: 34, borderRadius: '50%',
-                background: colors.surface, border: `1px solid ${colors.border}`,
-                color: colors.text3, cursor: 'pointer', fontSize: 14,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              ↩
-            </button>
-            <div style={{
+          <button
+            onClick={onProfile}
+            title="Perfil"
+            style={{
               width: 34, height: 34, borderRadius: '50%',
-              background: colors.primary,
+              background: colors.primary, border: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 700, color: '#141414', fontFamily: fonts.body,
-            }}>
-              {initials}
-            </div>
-          </div>
+              cursor: 'pointer',
+            }}
+          >
+            {initials}
+          </button>
         </div>
 
         {/* Balance card */}
