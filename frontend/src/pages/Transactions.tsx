@@ -28,6 +28,8 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
   const [deleteId,       setDeleteId]       = useState<string | null>(null)
   const [editTx,         setEditTx]         = useState<Transaction | null>(null)
   const [addOpen,        setAddOpen]        = useState(false)
+  const [sortField,      setSortField]      = useState<'date' | 'description' | 'amount'>('date')
+  const [sortDir,        setSortDir]        = useState<'asc' | 'desc'>('desc')
 
   const periods = (() => {
     const result: string[] = []
@@ -60,6 +62,19 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
     const abort = fetchTransactions()
     return () => abort.abort()
   }, [fetchTransactions])
+
+  function toggleSort(field: 'date' | 'description' | 'amount') {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir(field === 'date' ? 'desc' : 'asc') }
+  }
+
+  const sorted = [...transactions].sort((a, b) => {
+    let cmp = 0
+    if (sortField === 'description') cmp = a.description.localeCompare(b.description)
+    else if (sortField === 'amount')  cmp = a.amount - b.amount
+    else                              cmp = a.date.localeCompare(b.date)
+    return sortDir === 'asc' ? cmp : -cmp
+  })
 
   const total = transactions.reduce((sum, t) => sum + t.amount, 0)
 
@@ -99,12 +114,33 @@ export default function Transactions({ initialCategoryFilter, initialPeriodFilte
         </select>
       </div>
 
+      <div style={{ padding: '0 16px 8px', display: 'flex', gap: 6 }}>
+        {(['description', 'date', 'amount'] as const).map(field => {
+          const labels = { description: 'Descrição', date: 'Data', amount: 'Valor' }
+          const active = sortField === field
+          return (
+            <button
+              key={field}
+              onClick={() => toggleSort(field)}
+              style={{
+                flex: 1, padding: '5px 0', border: `1px solid ${active ? colors.primary : colors.border}`,
+                borderRadius: 8, background: active ? colors.primary : colors.surface,
+                color: active ? '#141414' : colors.text2,
+                fontSize: 11, fontFamily: fonts.body, cursor: 'pointer',
+              }}
+            >
+              {labels[field]}{active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+            </button>
+          )
+        })}
+      </div>
+
       <div style={{ padding: '4px 16px' }}>
-        {transactions.length === 0 ? (
+        {sorted.length === 0 ? (
           <EmptyState emoji="📭" text="Nenhuma transação encontrada." />
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
-            {transactions.map(t => (
+            {sorted.map(t => (
               <TransactionRow
                 key={t.id}
                 transaction={t}
