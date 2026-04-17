@@ -13,6 +13,7 @@ export async function login(page: Page) {
 }
 
 export async function logout(page: Page) {
-  await page.getByTitle('Sair').click()
+  await page.getByTitle('Perfil').click()
+  await page.getByRole('button', { name: 'Encerrar Sessão' }).click()
   await page.waitForSelector('text=Plutus', { timeout: 5000 })
 }

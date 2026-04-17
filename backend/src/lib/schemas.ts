@@ -10,6 +10,11 @@ export const SignInSchema = z.object({
   password: z.string().min(1),
 })
 
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword:     z.string().min(6),
+}).strict()
+
 // ── Transactions ──────────────────────────────────────────────────────
 export const TransactionListQuerySchema = z.object({
   period,
