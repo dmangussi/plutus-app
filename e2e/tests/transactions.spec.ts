@@ -136,6 +136,32 @@ test.describe('Transactions', () => {
     await expect(page.getByText(/inválid/i)).toBeVisible({ timeout: 3000 })
   })
 
+  test('sort by amount orders transactions correctly', async ({ page }) => {
+    skipIfNoUserId()
+    await clearTransactions(USER_ID)
+    await seedTransaction(USER_ID, { billing_period: nextMonthPeriod(), description: 'Barato', amount: 10 })
+    await seedTransaction(USER_ID, { billing_period: nextMonthPeriod(), description: 'Caro', amount: 500 })
+
+    await page.reload()
+    await page.waitForSelector('text=Olá', { timeout: 10000 })
+    await page.getByText('Gastos').click()
+
+    await expect(page.getByText('Barato')).toBeVisible({ timeout: 5000 })
+
+    // Sort by Valor ascending
+    await page.getByRole('button', { name: /valor/i }).click()
+    const rows = page.locator('[style*="grid"] > div')
+    const firstAsc  = await rows.first().textContent()
+    const secondAsc = await rows.nth(1).textContent()
+    expect(firstAsc).toContain('Barato')
+    expect(secondAsc).toContain('Caro')
+
+    // Sort by Valor descending (second click toggles direction)
+    await page.getByRole('button', { name: /valor/i }).click()
+    const firstDesc = await rows.first().textContent()
+    expect(firstDesc).toContain('Caro')
+  })
+
   test('switching period updates transaction list', async ({ page }) => {
     skipIfNoUserId()
     const select = page.locator('select').first()

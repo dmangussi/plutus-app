@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { apiFetch } from '../lib/api'
 import { useLoading } from '../hooks/useLoading'
 import { ErrorMessage } from './ErrorMessage'
-import { parseCSV } from '../utils/csv'
+import { parseCSV, normalizeDescription } from '../utils/csv'
 import { periodLabel } from '../utils/format'
 import { colors, fonts } from '../styles/theme'
 import { inputStyle, labelStyle } from '../styles/common'
@@ -70,7 +70,7 @@ export function UploadStep({ billingPeriod, onBillingPeriodChange, periodOptions
         const prefId  = prefixMap.get(prefix)
         return {
           tempId:          crypto.randomUUID(),
-          description:     r.description,
+          description:     normalizeDescription(r.description),
           rawDescription:  r.description,
           amount:          r.amount,
           date:            r.date,
