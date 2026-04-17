@@ -51,4 +51,28 @@ test.describe('Profile', () => {
     await page.getByRole('button', { name: /salvar nova senha/i }).click()
     await expect(page.getByText('Senha atual incorreta')).toBeVisible({ timeout: 5000 })
   })
+
+  test('successful password change shows success and clears fields', async ({ page }) => {
+    const original = process.env.TEST_USER_PASSWORD!
+    const temp     = original + '_tmp'
+
+    await page.getByTitle('Perfil').click()
+
+    // Change to temp password
+    let inputs = page.locator('input[type="password"]')
+    await inputs.nth(0).fill(original)
+    await inputs.nth(1).fill(temp)
+    await inputs.nth(2).fill(temp)
+    await page.getByRole('button', { name: /salvar nova senha/i }).click()
+    await expect(page.getByText('Senha alterada com sucesso')).toBeVisible({ timeout: 8000 })
+    await expect(inputs.nth(0)).toHaveValue('')
+
+    // Restore original password
+    inputs = page.locator('input[type="password"]')
+    await inputs.nth(0).fill(temp)
+    await inputs.nth(1).fill(original)
+    await inputs.nth(2).fill(original)
+    await page.getByRole('button', { name: /salvar nova senha/i }).click()
+    await expect(page.getByText('Senha alterada com sucesso')).toBeVisible({ timeout: 8000 })
+  })
 })
