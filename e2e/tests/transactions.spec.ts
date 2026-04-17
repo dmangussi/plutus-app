@@ -94,6 +94,32 @@ test.describe('Transactions', () => {
     await expect(page.getByText('Para Excluir')).not.toBeVisible({ timeout: 5000 })
   })
 
+  test('edit transaction updates date', async ({ page }) => {
+    skipIfNoUserId()
+    await clearTransactions(USER_ID)
+    await seedTransaction(USER_ID, {
+      billing_period: nextMonthPeriod(),
+      description: 'Tx Data Teste',
+      date: '2026-03-10',
+    })
+
+    await page.reload()
+    await page.waitForSelector('text=Olá', { timeout: 10000 })
+    await page.getByText('Gastos').click()
+
+    await expect(page.getByText('Tx Data Teste')).toBeVisible({ timeout: 5000 })
+    await page.getByText('Tx Data Teste').click()
+
+    const dateInput = page.locator('input[type="date"]')
+    await expect(dateInput).toBeVisible({ timeout: 3000 })
+    await expect(dateInput).toHaveValue('2026-03-10')
+
+    await dateInput.fill('2026-04-20')
+    await page.getByRole('button', { name: /salvar/i }).click()
+    await expect(page.getByRole('button', { name: /salvar/i })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('2026-04-20')).toBeVisible({ timeout: 5000 })
+  })
+
   test('invalid amount (zero) shows error', async ({ page }) => {
     await page.getByRole('button', { name: '+' }).click()
     await page.locator('input:not([type="number"]):not([type="date"]):not([readonly])').first().fill('Teste Valor Inválido')
